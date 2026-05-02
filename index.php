@@ -451,8 +451,8 @@ $has_logo      = file_exists(__DIR__ . '/assets/logo.png');
 </table>
 
 <script src="assets/quill.js"></script>
-<script type="module" src="assets/emoji-picker-element/index.js"></script>
-<script>
+<script type="module">
+import 'assets/emoji-picker-element/index.js';
 (function () {
     var SizeStyle = Quill.import('attributors/style/size');
     SizeStyle.whitelist = ['11px', '13px', '16px', '20px', '28px', '40px'];
@@ -522,28 +522,23 @@ $has_logo      = file_exists(__DIR__ . '/assets/logo.png');
 
     var activeQuill     = null;
     var activeSelection = null;
-    var emojiPicker     = null;
 
-    customElements.whenDefined('emoji-picker').then(function () {
-        emojiPicker = document.createElement('emoji-picker');
-        emojiPicker.dataSource = 'assets/emoji-data.json';
-        document.body.appendChild(emojiPicker);
+    var emojiPicker = document.createElement('emoji-picker');
+    emojiPicker.dataSource = 'assets/emoji-data.json';
+    document.body.appendChild(emojiPicker);
 
-        emojiPicker.addEventListener('emoji-click', function (e) {
-            var emoji = e.detail.unicode;
-            if (activeQuill && activeSelection !== null) {
-                activeQuill.insertText(activeSelection.index, emoji, 'user');
-                activeQuill.setSelection(activeSelection.index + emoji.length, 0);
-            }
-            emojiPicker.style.display = 'none';
-        });
-
-        emojiPicker.addEventListener('click', function (e) { e.stopPropagation(); });
+    emojiPicker.addEventListener('emoji-click', function (e) {
+        var emoji = e.detail.unicode;
+        if (activeQuill && activeSelection !== null) {
+            activeQuill.insertText(activeSelection.index, emoji, 'user');
+            activeQuill.setSelection(activeSelection.index + emoji.length, 0);
+        }
+        emojiPicker.style.display = 'none';
     });
 
-    document.addEventListener('click', function () {
-        if (emojiPicker) { emojiPicker.style.display = 'none'; }
-    });
+    emojiPicker.addEventListener('click', function (e) { e.stopPropagation(); });
+
+    document.addEventListener('click', function () { emojiPicker.style.display = 'none'; });
 
     function addEmojiToggle(q) {
         var container = q.getModule('toolbar').container;
@@ -562,7 +557,6 @@ $has_logo      = file_exists(__DIR__ . '/assets/logo.png');
 
         btn.addEventListener('click', function (e) {
             e.stopPropagation();
-            if (!emojiPicker) { return; }
             if (emojiPicker.style.display !== 'none') {
                 emojiPicker.style.display = 'none';
                 return;
