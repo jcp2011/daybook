@@ -479,7 +479,7 @@ $has_logo      = file_exists(__DIR__ . '/assets/logo.png');
     Quill.register(Quill.import('attributors/style/background'), true);
 
     var toolbar = [
-        ['bold', 'italic'],
+        ['bold', 'italic', 'link'],
         [{ color: [] }, { background: [] }],
         [{ size: ['11px', false, '16px', '20px', '28px', '40px'] }],
         [{ list: 'ordered' }, { list: 'bullet' }],

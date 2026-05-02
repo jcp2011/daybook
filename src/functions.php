@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 const DB_PATH            = __DIR__ . '/../data/instructions.db';
-const ALLOWED_HTML_TAGS  = ['p', 'br', 'strong', 'em', 'span', 'ol', 'ul', 'li'];
+const ALLOWED_HTML_TAGS  = ['p', 'br', 'strong', 'em', 'span', 'ol', 'ul', 'li', 'a'];
 const ALLOWED_STYLE_PROPS = ['color', 'background-color', 'font-size'];
 
 /**
@@ -190,6 +190,7 @@ function sanitise_rich_html(string $html): string
  * Recursively sanitises child nodes of $parent.
  *
  * Disallowed elements are replaced with their plain-text content.
+ * Anchor elements whose href is absent or unsafe are also replaced with text.
  * Allowed elements have their attributes sanitised, then their children processed.
  *
  * @param DOMDocument $doc    Owner document, needed to create replacement text nodes.
@@ -212,16 +213,23 @@ function sanitise_dom_node(DOMDocument $doc, DOMNode $parent): void
             continue;
         }
 
+        if ($node->tagName === 'a' && !is_safe_href($node->getAttribute('href'))) {
+            $parent->replaceChild($doc->createTextNode($node->textContent), $node);
+            continue;
+        }
+
         sanitise_dom_element($node);
         sanitise_dom_node($doc, $node);
     }
 }
 
 /**
- * Removes all attributes from $element except 'style'.
+ * Sanitises attributes of $element in place.
  *
- * The 'style' attribute is filtered to keep only properties listed in
- * ALLOWED_STYLE_PROPS. If no safe declarations remain, 'style' is also removed.
+ * Only 'style' (filtered to ALLOWED_STYLE_PROPS) is kept on all elements.
+ * On anchor elements, 'href' (already validated by the caller) and 'target'
+ * are also kept; 'target="_blank"' and 'rel="noopener noreferrer"' are
+ * enforced regardless of what the original markup contained.
  *
  * @param DOMElement $element Element to sanitise in place.
  */
@@ -233,18 +241,44 @@ function sanitise_dom_element(DOMElement $element): void
     }
 
     foreach ($attr_names as $name) {
-        if ($name !== 'style') {
-            $element->removeAttribute($name);
+        if ($name === 'style') {
+            $safe = sanitise_style_attr($element->getAttribute('style'));
+            if ($safe === '') {
+                $element->removeAttribute('style');
+            } else {
+                $element->setAttribute('style', $safe);
+            }
             continue;
         }
 
-        $safe = sanitise_style_attr($element->getAttribute('style'));
-        if ($safe === '') {
-            $element->removeAttribute('style');
-        } else {
-            $element->setAttribute('style', $safe);
+        if ($element->tagName === 'a' && ($name === 'href' || $name === 'target')) {
+            continue;
         }
+
+        $element->removeAttribute($name);
     }
+
+    if ($element->tagName === 'a') {
+        $element->setAttribute('target', '_blank');
+        $element->setAttribute('rel', 'noopener noreferrer');
+    }
+}
+
+/**
+ * Returns true when $href uses an allowed scheme (http, https, mailto).
+ *
+ * Leading whitespace and case variations are normalised before the check so
+ * tricks like "  JAVASCRIPT:" are rejected.
+ *
+ * @param string $href Raw href attribute value.
+ */
+function is_safe_href(string $href): bool
+{
+    $normalised = ltrim(strtolower($href));
+
+    return str_starts_with($normalised, 'http://')
+        || str_starts_with($normalised, 'https://')
+        || str_starts_with($normalised, 'mailto:');
 }
 
 /**

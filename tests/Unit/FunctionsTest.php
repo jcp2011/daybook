@@ -113,6 +113,46 @@ class FunctionsTest extends TestCase
         self::assertStringNotContainsString('javascript', $result);
     }
 
+    public function test_sanitise_rich_html_allows_https_link(): void
+    {
+        $result = sanitise_rich_html('<p><a href="https://example.com">Visit</a></p>');
+        self::assertStringContainsString('href="https://example.com"', $result);
+        self::assertStringContainsString('Visit', $result);
+    }
+
+    public function test_sanitise_rich_html_allows_http_link(): void
+    {
+        $result = sanitise_rich_html('<p><a href="http://example.com">Visit</a></p>');
+        self::assertStringContainsString('href="http://example.com"', $result);
+    }
+
+    public function test_sanitise_rich_html_allows_mailto_link(): void
+    {
+        $result = sanitise_rich_html('<p><a href="mailto:test@example.com">Email</a></p>');
+        self::assertStringContainsString('href="mailto:test@example.com"', $result);
+    }
+
+    public function test_sanitise_rich_html_adds_rel_noopener_to_links(): void
+    {
+        $result = sanitise_rich_html('<p><a href="https://example.com">Visit</a></p>');
+        self::assertStringContainsString('rel="noopener noreferrer"', $result);
+        self::assertStringContainsString('target="_blank"', $result);
+    }
+
+    public function test_sanitise_rich_html_strips_data_href(): void
+    {
+        $result = sanitise_rich_html('<p><a href="data:text/html,xss">click</a></p>');
+        self::assertStringNotContainsString('<a', $result);
+        self::assertStringNotContainsString('data:', $result);
+    }
+
+    public function test_sanitise_rich_html_strips_link_with_no_href(): void
+    {
+        $result = sanitise_rich_html('<p><a>bare link</a></p>');
+        self::assertStringNotContainsString('<a', $result);
+        self::assertStringContainsString('bare link', $result);
+    }
+
     public function test_sanitise_rich_html_keeps_allowed_style_property(): void
     {
         $result = sanitise_rich_html('<span style="color: red;">text</span>');
