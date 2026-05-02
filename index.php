@@ -99,7 +99,7 @@ $has_logo      = file_exists(__DIR__ . '/assets/logo.png');
             margin-bottom: 1.5rem;
         }
 
-        .logo { max-height: 60px; max-width: 200px; object-fit: contain; display: block; }
+        .logo { height: 50px; width: auto; display: block; }
 
         .logo-placeholder {
             width: 120px;
