@@ -255,45 +255,21 @@ $has_logo      = file_exists(__DIR__ . '/assets/logo.png');
         .sort-asc  { border-left: 4px solid transparent; border-right: 4px solid transparent; border-bottom: 5px solid #6b7280; }
         .sort-desc { border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 5px solid #6b7280; }
 
-        .emoji-panel {
-            position: fixed;
-            z-index: 200;
-            background: #fff;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            box-shadow: 0 4px 16px rgba(0,0,0,.12);
-            padding: .75rem;
-            width: 284px;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        .emoji-cat {
-            font-size: .7rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: .04em;
-            color: #9ca3af;
-            margin: .5rem 0 .25rem;
-        }
-
-        .emoji-cat:first-child { margin-top: 0; }
-
-        .emoji-grid { display: flex; flex-wrap: wrap; gap: 2px; }
-
-        .emoji-btn {
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-size: 1.25rem;
-            padding: .2rem;
-            border-radius: 4px;
-            line-height: 1;
-        }
-
-        .emoji-btn:hover { background: #f3f4f6; }
-
         .ql-toolbar .ql-emoji { width: auto; padding: 3px 7px; font-size: .75rem; font-family: inherit; }
+
+        emoji-picker {
+            --border-color: #e5e7eb;
+            --border-radius: 8px;
+            --box-shadow: 0 4px 16px rgba(0,0,0,.12);
+            --background: #fff;
+            --input-border-color: #d1d5db;
+            --input-font-color: #1a1a1a;
+            --button-hover-background: #f3f4f6;
+            --category-font-color: #6b7280;
+            position: fixed;
+            z-index: 300;
+            display: none;
+        }
 
         .ql-snow .ql-picker.ql-size .ql-picker-label::before,
         .ql-snow .ql-picker.ql-size .ql-picker-item::before { content: 'Normal'; }
@@ -475,6 +451,7 @@ $has_logo      = file_exists(__DIR__ . '/assets/logo.png');
 </table>
 
 <script src="assets/quill.js"></script>
+<script type="module" src="assets/emoji-picker-element/index.js"></script>
 <script>
 (function () {
     var SizeStyle = Quill.import('attributors/style/size');
@@ -543,59 +520,28 @@ $has_logo      = file_exists(__DIR__ . '/assets/logo.png');
 
     // --- Emoji picker ---
 
-    var EMOJIS = [
-        { label: 'Smileys', items: ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','😉','😌','😍','🥰','😘','😋','😛','😝','😜','🤓','😎','🥳','😏','😒','😞','😔','😟','😕','😣','😫','😩','🥺','😢','😭','😤','😠','😡','🤯','😳','😱','😨','😰','😥','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😮','😲','🥱','😴','🤤','😵','🤢','🤮','🤧','😷','🤒','🤕'] },
-        { label: 'Hands',   items: ['👍','👎','👏','🙌','🤝','👌','🤞','🤟','🤘','🤙','👈','👉','👆','👇','👋','✋','🖖','💪','🤲','✊','👊'] },
-        { label: 'Hearts',  items: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💕','💞','💓','💗','💖','💝','💘','💟','❣️','💔'] },
-        { label: 'Symbols', items: ['⭐','🌟','✨','💫','🎉','🎊','🎁','🔥','💯','✅','❌','⚡','💡','🌈','🏆','🎯','💎','🔑','🎵','🎶','📝','📌','💬','❓','❗'] },
-    ];
-
     var activeQuill     = null;
     var activeSelection = null;
 
-    var emojiPanel = (function () {
-        var p = document.createElement('div');
-        p.className    = 'emoji-panel';
-        p.style.display = 'none';
+    var emojiPicker = document.createElement('emoji-picker');
+    emojiPicker.dataSource = 'assets/emoji-data.json';
+    document.body.appendChild(emojiPicker);
 
-        EMOJIS.forEach(function (cat) {
-            var heading = document.createElement('p');
-            heading.className   = 'emoji-cat';
-            heading.textContent = cat.label;
-            p.appendChild(heading);
+    emojiPicker.addEventListener('emoji-click', function (e) {
+        var emoji = e.detail.unicode;
+        if (activeQuill && activeSelection !== null) {
+            activeQuill.insertText(activeSelection.index, emoji, 'user');
+            activeQuill.setSelection(activeSelection.index + emoji.length, 0);
+        }
+        emojiPicker.style.display = 'none';
+    });
 
-            var grid = document.createElement('div');
-            grid.className = 'emoji-grid';
-
-            cat.items.forEach(function (emoji) {
-                var btn = document.createElement('button');
-                btn.type        = 'button';
-                btn.className   = 'emoji-btn';
-                btn.textContent = emoji;
-                btn.addEventListener('click', function (e) {
-                    e.stopPropagation();
-                    if (activeQuill && activeSelection !== null) {
-                        activeQuill.insertText(activeSelection.index, emoji, 'user');
-                        activeQuill.setSelection(activeSelection.index + emoji.length, 0);
-                    }
-                    p.style.display = 'none';
-                });
-                grid.appendChild(btn);
-            });
-
-            p.appendChild(grid);
-        });
-
-        document.body.appendChild(p);
-        return p;
-    }());
-
-    document.addEventListener('click', function () { emojiPanel.style.display = 'none'; });
-    emojiPanel.addEventListener('click', function (e) { e.stopPropagation(); });
+    document.addEventListener('click', function () { emojiPicker.style.display = 'none'; });
+    emojiPicker.addEventListener('click', function (e) { e.stopPropagation(); });
 
     function addEmojiToggle(q) {
-        var toolbar = q.getModule('toolbar').container;
-        var span    = document.createElement('span');
+        var container = q.getModule('toolbar').container;
+        var span      = document.createElement('span');
         span.className = 'ql-formats';
 
         var btn = document.createElement('button');
@@ -610,18 +556,18 @@ $has_logo      = file_exists(__DIR__ . '/assets/logo.png');
 
         btn.addEventListener('click', function (e) {
             e.stopPropagation();
-            if (emojiPanel.style.display !== 'none') {
-                emojiPanel.style.display = 'none';
+            if (emojiPicker.style.display !== 'none') {
+                emojiPicker.style.display = 'none';
                 return;
             }
             var rect = btn.getBoundingClientRect();
-            emojiPanel.style.top     = (rect.bottom + 4) + 'px';
-            emojiPanel.style.left    = Math.min(rect.left, window.innerWidth - 292) + 'px';
-            emojiPanel.style.display = 'block';
+            emojiPicker.style.top     = (rect.bottom + 4) + 'px';
+            emojiPicker.style.left    = Math.min(rect.left, window.innerWidth - 350) + 'px';
+            emojiPicker.style.display = 'block';
         });
 
         span.appendChild(btn);
-        toolbar.appendChild(span);
+        container.appendChild(span);
     }
 
     addEmojiToggle(quill);
