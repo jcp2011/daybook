@@ -31,11 +31,13 @@ The SQLite database is created automatically at `data/instructions.db` on the fi
   - Bold, italic
   - Text colour, background colour, font size
   - Ordered and unordered lists
+  - Hyperlinks (http, https, mailto — unsafe schemes are stripped on save)
   - Emoji picker integrated into the toolbar
 - Edit active instructions inline (archived instructions are read-only)
 - Archive and restore instructions (archived entries record the archival date/time)
 - Delete instructions permanently
 - Sort by date ascending or descending (click the Date column header)
+- Timestamps (archived date, default date input) use the server's local timezone, detected automatically from the OS
 - Custom logo: place `assets/logo.png` to display it in the header
 
 ## Project Structure
