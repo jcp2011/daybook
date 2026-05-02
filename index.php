@@ -524,7 +524,7 @@ $has_logo      = file_exists(__DIR__ . '/assets/logo.png');
     var activeSelection = null;
 
     var emojiPicker = document.createElement('emoji-picker');
-    emojiPicker.dataSource = 'assets/emoji-data.json';
+    emojiPicker.setAttribute('data-source', 'assets/emoji-data.json');
     document.body.appendChild(emojiPicker);
 
     emojiPicker.addEventListener('emoji-click', function (e) {
