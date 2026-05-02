@@ -288,6 +288,29 @@ $has_logo      = file_exists(__DIR__ . '/assets/logo.png');
 
         .ql-toolbar .ql-emoji { width: auto; padding: 3px 7px; font-size: .75rem; font-family: inherit; }
 
+        .ql-snow .ql-picker.ql-size .ql-picker-label::before,
+        .ql-snow .ql-picker.ql-size .ql-picker-item::before { content: 'Normal'; }
+
+        .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="11px"]::before,
+        .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="11px"]::before { content: '11px'; }
+        .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="11px"]::before { font-size: 11px; }
+
+        .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="16px"]::before,
+        .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="16px"]::before { content: '16px'; }
+        .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="16px"]::before { font-size: 16px; }
+
+        .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="20px"]::before,
+        .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="20px"]::before { content: '20px'; }
+        .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="20px"]::before { font-size: 20px; }
+
+        .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="28px"]::before,
+        .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="28px"]::before { content: '28px'; }
+        .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="28px"]::before { font-size: 28px; }
+
+        .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="40px"]::before,
+        .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="40px"]::before { content: '40px'; }
+        .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="40px"]::before { font-size: 40px; }
+
         .modal-backdrop {
             display: none;
             position: fixed;
