@@ -522,22 +522,28 @@ $has_logo      = file_exists(__DIR__ . '/assets/logo.png');
 
     var activeQuill     = null;
     var activeSelection = null;
+    var emojiPicker     = null;
 
-    var emojiPicker = document.createElement('emoji-picker');
-    emojiPicker.setAttribute('data-source', 'assets/emoji-data.json');
-    document.body.appendChild(emojiPicker);
+    customElements.whenDefined('emoji-picker').then(function () {
+        emojiPicker = document.createElement('emoji-picker');
+        emojiPicker.dataSource = 'assets/emoji-data.json';
+        document.body.appendChild(emojiPicker);
 
-    emojiPicker.addEventListener('emoji-click', function (e) {
-        var emoji = e.detail.unicode;
-        if (activeQuill && activeSelection !== null) {
-            activeQuill.insertText(activeSelection.index, emoji, 'user');
-            activeQuill.setSelection(activeSelection.index + emoji.length, 0);
-        }
-        emojiPicker.style.display = 'none';
+        emojiPicker.addEventListener('emoji-click', function (e) {
+            var emoji = e.detail.unicode;
+            if (activeQuill && activeSelection !== null) {
+                activeQuill.insertText(activeSelection.index, emoji, 'user');
+                activeQuill.setSelection(activeSelection.index + emoji.length, 0);
+            }
+            emojiPicker.style.display = 'none';
+        });
+
+        emojiPicker.addEventListener('click', function (e) { e.stopPropagation(); });
     });
 
-    document.addEventListener('click', function () { emojiPicker.style.display = 'none'; });
-    emojiPicker.addEventListener('click', function (e) { e.stopPropagation(); });
+    document.addEventListener('click', function () {
+        if (emojiPicker) { emojiPicker.style.display = 'none'; }
+    });
 
     function addEmojiToggle(q) {
         var container = q.getModule('toolbar').container;
@@ -556,13 +562,14 @@ $has_logo      = file_exists(__DIR__ . '/assets/logo.png');
 
         btn.addEventListener('click', function (e) {
             e.stopPropagation();
+            if (!emojiPicker) { return; }
             if (emojiPicker.style.display !== 'none') {
                 emojiPicker.style.display = 'none';
                 return;
             }
             var rect = btn.getBoundingClientRect();
-            emojiPicker.style.top     = (rect.bottom + 4) + 'px';
-            emojiPicker.style.left    = Math.min(rect.left, window.innerWidth - 350) + 'px';
+            emojiPicker.style.top  = (rect.bottom + 4) + 'px';
+            emojiPicker.style.left = Math.min(rect.left, window.innerWidth - 350) + 'px';
             emojiPicker.style.display = 'block';
         });
 
