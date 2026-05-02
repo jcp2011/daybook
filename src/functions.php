@@ -7,7 +7,7 @@ const ALLOWED_HTML_TAGS  = ['p', 'br', 'strong', 'em', 'span', 'ol', 'ul', 'li']
 const ALLOWED_STYLE_PROPS = ['color', 'background-color', 'font-size'];
 
 /**
- * Opens the SQLite database, creates the schema if missing, and runs migrations.
+ * Opens the SQLite database and creates the schema if it does not exist.
  *
  * @param string $path Filesystem path to the database file, or ':memory:'.
  * @return PDO Configured database connection.
@@ -32,33 +32,7 @@ function get_db(string $path = DB_PATH): PDO
         )
     ');
 
-    run_migrations($db);
-
     return $db;
-}
-
-/**
- * Applies pending schema migrations.
- *
- * Each ALTER TABLE is attempted independently. A PDOException indicates the
- * column already exists and is logged rather than propagated.
- *
- * @param PDO $db Database connection.
- */
-function run_migrations(PDO $db): void
-{
-    $migrations = [
-        'ALTER TABLE instructions ADD COLUMN archived_at TEXT DEFAULT NULL',
-        'ALTER TABLE instructions ADD COLUMN is_rich INTEGER NOT NULL DEFAULT 0',
-    ];
-
-    foreach ($migrations as $sql) {
-        try {
-            $db->exec($sql);
-        } catch (\PDOException $e) {
-            error_log('Migration skipped (column likely exists): ' . $e->getMessage());
-        }
-    }
 }
 
 /**
