@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/src/functions.php';
 
+apply_system_timezone();
+
 // --- Handle POST (PRG pattern) ---
 
 $db    = get_db();

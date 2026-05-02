@@ -7,6 +7,21 @@ const ALLOWED_HTML_TAGS  = ['p', 'br', 'strong', 'em', 'span', 'ol', 'ul', 'li']
 const ALLOWED_STYLE_PROPS = ['color', 'background-color', 'font-size'];
 
 /**
+ * Detects the OS timezone from /etc/localtime and applies it to PHP.
+ *
+ * Falls back to the timezone already configured in php.ini when detection
+ * fails (e.g. the symlink is absent or points to an unrecognised zone).
+ */
+function apply_system_timezone(): void
+{
+    $link = is_link('/etc/localtime') ? (string) readlink('/etc/localtime') : '';
+
+    if (preg_match('~zoneinfo/(.+)$~', $link, $m) && in_array($m[1], timezone_identifiers_list(), true)) {
+        date_default_timezone_set($m[1]);
+    }
+}
+
+/**
  * Opens the SQLite database and creates the schema if it does not exist.
  *
  * @param string $path Filesystem path to the database file, or ':memory:'.
@@ -96,15 +111,15 @@ function set_archived(PDO $db, int $id, bool $archived): void
 {
     if ($archived) {
         $stmt = $db->prepare(
-            "UPDATE instructions SET archived = 1, archived_at = datetime('now', 'localtime') WHERE id = ?"
+            'UPDATE instructions SET archived = 1, archived_at = ? WHERE id = ?'
         );
+        $stmt->execute([date('Y-m-d H:i:s'), $id]);
     } else {
         $stmt = $db->prepare(
             'UPDATE instructions SET archived = 0, archived_at = NULL WHERE id = ?'
         );
+        $stmt->execute([$id]);
     }
-
-    $stmt->execute([$id]);
 }
 
 /**
