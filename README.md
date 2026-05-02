@@ -32,7 +32,7 @@ The SQLite database is created automatically at `data/instructions.db` on the fi
   - Text colour, background colour, font size
   - Ordered and unordered lists
   - Hyperlinks (http, https, mailto — unsafe schemes are stripped on save)
-  - Emoji picker integrated into the toolbar
+  - Full Unicode emoji picker (emoji-picker-element, fully local — no CDN) with search and categories
 - Edit active instructions inline (archived instructions are read-only)
 - Archive and restore instructions (archived entries record the archival date/time)
 - Delete instructions permanently
@@ -45,23 +45,26 @@ The SQLite database is created automatically at `data/instructions.db` on the fi
 ```
 .
 +-- assets/
-|   +-- quill.js          # Quill 1.3.7 (local copy)
-|   +-- quill.snow.css    # Quill Snow theme (local copy)
-+-- data/                 # SQLite database (git-ignored)
+|   +-- emoji-data.json              # Unicode emoji dataset (emoji-picker-element-data)
+|   +-- emoji-picker-element/        # emoji-picker-element web component (local copy)
+|   +-- quill.js                     # Quill 1.3.7 (local copy)
+|   +-- quill.snow.css               # Quill Snow theme (local copy)
++-- data/                            # SQLite database (git-ignored)
 +-- src/
-|   +-- functions.php     # All business logic and database functions
+|   +-- functions.php                # All business logic and database functions
 +-- tests/
 |   +-- Unit/
 |   |   +-- FunctionsTest.php
 |   +-- bootstrap.php
 +-- tools/
+|   +-- download-emoji-picker.sh     # Download/update emoji-picker-element assets
 |   +-- php-cs-fixer.phar
 |   +-- phpstan.phar
 |   +-- phpunit.phar
 |   +-- SHA256SUMS
 +-- .php-cs-fixer.php
 +-- CHANGELOG.md
-+-- index.php             # Entry point and UI
++-- index.php                        # Entry point and UI
 +-- phpstan.neon
 +-- phpunit.xml
 ```
@@ -87,6 +90,16 @@ php tools/phpstan.phar analyse --memory-limit=512M
 ```bash
 php tools/phpunit.phar
 ```
+
+## Updating the emoji picker
+
+The emoji dataset and the web component are versioned independently. To update either or both to the latest release, run the download script from a machine with internet access:
+
+```bash
+bash tools/download-emoji-picker.sh
+```
+
+The script uses only `curl` and `tar` — no npm or Node.js required. It fetches the latest versions from the npm registry, replaces `assets/emoji-picker-element/` and `assets/emoji-data.json`, and prints the installed version numbers. Commit the updated files to keep the repository deployable on air-gapped machines.
 
 ## Logo
 
