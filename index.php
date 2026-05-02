@@ -150,10 +150,15 @@ $has_logo      = file_exists(__DIR__ . '/assets/logo.png');
             border-radius: 0 0 4px 4px;
             font-family: inherit;
             font-size: 14px;
+        }
+
+        .editor-wrap .ql-editor {
             min-height: 60px;
             max-height: 160px;
             overflow-y: auto;
         }
+
+        .ql-snow .ql-tooltip { z-index: 300; }
 
         .tabs {
             display: flex;
