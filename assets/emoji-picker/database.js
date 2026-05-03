@@ -807,13 +807,20 @@ function binaryStringToArrayBuffer(binary) {
 // generate a checksum based on the stringified JSON
 async function jsonChecksum (object) {
   const inString = JSON.stringify(object);
-  let inBuffer = binaryStringToArrayBuffer(inString);
 
-  // this does not need to be cryptographically secure, SHA-1 is fine
-  const outBuffer = await crypto.subtle.digest('SHA-1', inBuffer);
-  const outBinString = arrayBufferToBinaryString(outBuffer);
-  const res = btoa(outBinString);
-  return res
+  // crypto.subtle requires a secure context (HTTPS or localhost); fall back to a
+  // simple djb2 integer hash when it is unavailable (e.g. plain HTTP on a LAN IP).
+  if (typeof crypto !== 'undefined' && crypto.subtle) {
+    let inBuffer = binaryStringToArrayBuffer(inString);
+    const outBuffer = await crypto.subtle.digest('SHA-1', inBuffer);
+    const outBinString = arrayBufferToBinaryString(outBuffer);
+    return btoa(outBinString)
+  }
+  let hash = 5381;
+  for (let i = 0; i < inString.length; i++) {
+    hash = Math.imul(hash, 33) ^ inString.charCodeAt(i);
+  }
+  return (hash >>> 0).toString(36)
 }
 
 async function doCheckForUpdates (db, dataSource) {

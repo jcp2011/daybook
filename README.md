@@ -45,8 +45,13 @@ The SQLite database is created automatically at `data/instructions.db` on the fi
 ```
 .
 +-- assets/
-|   +-- emoji-data.json              # Unicode emoji dataset (emoji-picker-element-data)
-|   +-- emoji-picker-element/        # emoji-picker-element web component (local copy)
+|   +-- emoji-picker/                # emoji-picker-element web component (local copy)
+|   |   +-- picker.js                #   web component implementation
+|   |   +-- database.js              #   IndexedDB cache layer (patched for plain HTTP)
+|   |   +-- emoji-picker-element.js  #   entry-point re-export
+|   |   +-- en/emojibase/data.json   #   emoji dataset - English
+|   |   +-- fr/emojibase/data.json   #   emoji dataset - French
+|   |   +-- i18n/fr.js              #   UI translations - French
 |   +-- quill.js                     # Quill 1.3.7 (local copy)
 |   +-- quill.snow.css               # Quill Snow theme (local copy)
 +-- data/                            # SQLite database (git-ignored)
@@ -93,13 +98,25 @@ php tools/phpunit.phar
 
 ## Updating the emoji picker
 
-The emoji dataset and the web component are versioned independently. To update either or both to the latest release, run the download script from a machine with internet access:
+Run the download script from a machine with internet access:
 
 ```bash
 bash tools/download-emoji-picker.sh
 ```
 
-The script uses only `curl` and `tar` — no npm or Node.js required. It fetches the latest versions from the npm registry, replaces `assets/emoji-picker-element/` and `assets/emoji-data.json`, and prints the installed version numbers. Commit the updated files to keep the repository deployable on air-gapped machines.
+The script uses only `curl`, `tar`, and `python3` — no npm or Node.js required. It:
+
+1. Fetches the latest versions of `emoji-picker-element` and `emoji-picker-element-data` from the npm registry
+2. Extracts only the files needed (`picker.js`, `database.js`, `index.js`, data and i18n files)
+3. Automatically patches `database.js` with a fallback hash so the picker works on plain HTTP (non-localhost IP addresses where `crypto.subtle` is unavailable)
+
+Commit the updated `assets/emoji-picker/` afterwards to keep the repository deployable on air-gapped machines.
+
+To add or remove languages, edit the `LANGUAGES` variable at the top of the script.
+
+### Note on the database.js patch
+
+`database.js` ships from npm without a `crypto.subtle` fallback. The download script patches `jsonChecksum()` automatically. If after an update you see "Could not load emoji" and `TypeError: Cannot read properties of undefined (reading 'digest')` in the browser console, the patch did not apply cleanly (upstream changed the function). Re-apply it manually: add a guard `if (typeof crypto !== 'undefined' && crypto.subtle)` around the `crypto.subtle.digest()` call and add a djb2 integer hash as the else branch.
 
 ## Logo
 

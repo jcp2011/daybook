@@ -255,43 +255,13 @@ $has_logo      = file_exists(__DIR__ . '/assets/logo.png');
         .sort-asc  { border-left: 4px solid transparent; border-right: 4px solid transparent; border-bottom: 5px solid #6b7280; }
         .sort-desc { border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 5px solid #6b7280; }
 
-        .emoji-panel {
+        emoji-picker {
             position: fixed;
             z-index: 200;
-            background: #fff;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            box-shadow: 0 4px 16px rgba(0,0,0,.12);
-            padding: .75rem;
-            width: 284px;
-            max-height: 300px;
-            overflow-y: auto;
+            width: 370px;
+            height: 400px;
+            --border-radius: 8px;
         }
-
-        .emoji-cat {
-            font-size: .7rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: .04em;
-            color: #9ca3af;
-            margin: .5rem 0 .25rem;
-        }
-
-        .emoji-cat:first-child { margin-top: 0; }
-
-        .emoji-grid { display: flex; flex-wrap: wrap; gap: 2px; }
-
-        .emoji-btn {
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-size: 1.25rem;
-            padding: .2rem;
-            border-radius: 4px;
-            line-height: 1;
-        }
-
-        .emoji-btn:hover { background: #f3f4f6; }
 
         .ql-toolbar .ql-emoji { width: auto; padding: 3px 7px; font-size: .75rem; font-family: inherit; }
 
@@ -474,6 +444,7 @@ $has_logo      = file_exists(__DIR__ . '/assets/logo.png');
     </tbody>
 </table>
 
+<script type="module" src="assets/emoji-picker/picker.js"></script>
 <script src="assets/quill.js"></script>
 <script>
 (function () {
@@ -543,89 +514,76 @@ $has_logo      = file_exists(__DIR__ . '/assets/logo.png');
 
     // --- Emoji picker ---
 
-    var EMOJIS = [
-        { label: 'Smileys', items: ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','😉','😌','😍','🥰','😘','😋','😛','😝','😜','🤓','😎','🥳','😏','😒','😞','😔','😟','😕','😣','😫','😩','🥺','😢','😭','😤','😠','😡','🤯','😳','😱','😨','😰','😥','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😮','😲','🥱','😴','🤤','😵','🤢','🤮','🤧','😷','🤒','🤕'] },
-        { label: 'Hands',   items: ['👍','👎','👏','🙌','🤝','👌','🤞','🤟','🤘','🤙','👈','👉','👆','👇','👋','✋','🖖','💪','🤲','✊','👊'] },
-        { label: 'Hearts',  items: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💕','💞','💓','💗','💖','💝','💘','💟','❣️','💔'] },
-        { label: 'Symbols', items: ['⭐','🌟','✨','💫','🎉','🎊','🎁','🔥','💯','✅','❌','⚡','💡','🌈','🏆','🎯','💎','🔑','🎵','🎶','📝','📌','💬','❓','❗'] },
-    ];
+    customElements.whenDefined('emoji-picker').then(function () {
+        var activeQuill     = null;
+        var activeSelection = null;
 
-    var activeQuill     = null;
-    var activeSelection = null;
+        var picker          = document.createElement('emoji-picker');
+        picker.dataSource   = new URL('assets/emoji-picker/en/emojibase/data.json', document.baseURI).href;
+        picker.style.display = 'none';
+        document.body.appendChild(picker);
 
-    var emojiPanel = (function () {
-        var p = document.createElement('div');
-        p.className     = 'emoji-panel';
-        p.style.display = 'none';
+        document.addEventListener('click', function () { picker.style.display = 'none'; });
+        picker.addEventListener('click',   function (e) { e.stopPropagation(); });
 
-        EMOJIS.forEach(function (cat) {
-            var heading = document.createElement('p');
-            heading.className   = 'emoji-cat';
-            heading.textContent = cat.label;
-            p.appendChild(heading);
+        picker.addEventListener('emoji-click', function (e) {
+            var detail   = e.detail;
+            var skinTone = detail.skinTone;
+            var emojiChar = '';
 
-            var grid = document.createElement('div');
-            grid.className = 'emoji-grid';
+            // Prefer the raw DB record's skins array: indexed 0..N-1, each {tone, unicode}.
+            // detail.unicode is pre-computed but may fall back to base if the summary layer
+            // filtered out skin variants (emojiSupportLevel check).
+            if (skinTone > 0 && detail.emoji && Array.isArray(detail.emoji.skins)) {
+                var skin = detail.emoji.skins.find(function (s) { return s.tone === skinTone; });
+                if (skin) { emojiChar = skin.unicode || ''; }
+            }
+            if (!emojiChar) {
+                emojiChar = detail.unicode ||
+                    (detail.emoji && (detail.emoji.emoji || detail.emoji.unicode)) || '';
+            }
 
-            cat.items.forEach(function (emoji) {
-                var btn = document.createElement('button');
-                btn.type        = 'button';
-                btn.className   = 'emoji-btn';
-                btn.textContent = emoji;
-                btn.addEventListener('click', function (e) {
-                    e.stopPropagation();
-                    if (activeQuill && activeSelection !== null) {
-                        activeQuill.insertText(activeSelection.index, emoji, 'user');
-                        activeQuill.setSelection(activeSelection.index + emoji.length, 0);
-                    }
-                    p.style.display = 'none';
-                });
-                grid.appendChild(btn);
+            if (emojiChar && activeQuill && activeSelection !== null) {
+                activeQuill.insertText(activeSelection.index, emojiChar, 'user');
+                activeQuill.setSelection(activeSelection.index + emojiChar.length, 0);
+            }
+            picker.style.display = 'none';
+        });
+
+        function addEmojiToggle(q) {
+            var container = q.getModule('toolbar').container;
+            var span      = document.createElement('span');
+            span.className = 'ql-formats';
+
+            var btn = document.createElement('button');
+            btn.type        = 'button';
+            btn.className   = 'ql-emoji';
+            btn.textContent = 'Emoji';
+
+            btn.addEventListener('mousedown', function () {
+                activeQuill     = q;
+                activeSelection = q.getSelection() || { index: Math.max(0, q.getLength() - 1), length: 0 };
             });
 
-            p.appendChild(grid);
-        });
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                if (picker.style.display !== 'none') {
+                    picker.style.display = 'none';
+                    return;
+                }
+                picker.style.display = 'block';
+                var rect = btn.getBoundingClientRect();
+                picker.style.top  = (rect.bottom + 4) + 'px';
+                picker.style.left = Math.min(rect.left, window.innerWidth - picker.offsetWidth - 8) + 'px';
+            });
 
-        document.body.appendChild(p);
-        return p;
-    }());
+            span.appendChild(btn);
+            container.appendChild(span);
+        }
 
-    document.addEventListener('click', function () { emojiPanel.style.display = 'none'; });
-    emojiPanel.addEventListener('click', function (e) { e.stopPropagation(); });
-
-    function addEmojiToggle(q) {
-        var container = q.getModule('toolbar').container;
-        var span      = document.createElement('span');
-        span.className = 'ql-formats';
-
-        var btn = document.createElement('button');
-        btn.type        = 'button';
-        btn.className   = 'ql-emoji';
-        btn.textContent = 'Emoji';
-
-        btn.addEventListener('mousedown', function () {
-            activeQuill     = q;
-            activeSelection = q.getSelection() || { index: Math.max(0, q.getLength() - 1), length: 0 };
-        });
-
-        btn.addEventListener('click', function (e) {
-            e.stopPropagation();
-            if (emojiPanel.style.display !== 'none') {
-                emojiPanel.style.display = 'none';
-                return;
-            }
-            var rect = btn.getBoundingClientRect();
-            emojiPanel.style.top     = (rect.bottom + 4) + 'px';
-            emojiPanel.style.left    = Math.min(rect.left, window.innerWidth - 292) + 'px';
-            emojiPanel.style.display = 'block';
-        });
-
-        span.appendChild(btn);
-        container.appendChild(span);
-    }
-
-    addEmojiToggle(quill);
-    addEmojiToggle(editQuill);
+        addEmojiToggle(quill);
+        addEmojiToggle(editQuill);
+    });
 }());
 </script>
 </body>
