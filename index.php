@@ -415,7 +415,7 @@ if ($emoji_lang !== 'en') {
             <th></th>
         </tr>
     </thead>
-    <tbody>
+    <tbody id="instructions-body">
         <?php if ($instructions === []): ?>
             <tr>
                 <td colspan="<?= $show_archived ? 4 : 3 ?>" class="empty">
@@ -508,13 +508,14 @@ if ($emoji_lang !== 'en') {
         document.getElementById('description-input').value = html;
     });
 
-    document.querySelectorAll('.edit-btn').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            document.getElementById('edit-id').value    = btn.dataset.id;
-            document.getElementById('edit-date').value  = btn.dataset.date;
-            editQuill.root.innerHTML                    = btn.dataset.content;
-            document.getElementById('edit-backdrop').classList.add('open');
-        });
+    // Event delegation keeps edit buttons functional after tbody innerHTML swaps.
+    document.getElementById('instructions-body').addEventListener('click', function (e) {
+        var btn = e.target.closest('.edit-btn');
+        if (!btn) { return; }
+        document.getElementById('edit-id').value   = btn.dataset.id;
+        document.getElementById('edit-date').value = btn.dataset.date;
+        editQuill.root.innerHTML                   = btn.dataset.content;
+        document.getElementById('edit-backdrop').classList.add('open');
     });
 
     document.getElementById('edit-cancel').addEventListener('click', function () {
@@ -614,6 +615,41 @@ if ($emoji_lang !== 'en') {
         addEmojiToggle(quill);
         addEmojiToggle(editQuill);
     }); // customElements.whenDefined
+
+    // --- Auto-refresh ---
+
+    var refreshTbody    = document.getElementById('instructions-body');
+    var refreshDate     = document.querySelector('#add-form input[type="datetime-local"]');
+    var dateUserModified = false;
+
+    refreshDate.addEventListener('input', function () { dateUserModified = true; });
+
+    function nowDatetimeLocal() {
+        var d   = new Date();
+        var pad = function (n) { return String(n).padStart(2, '0'); };
+        return d.getFullYear() + '-'
+            + pad(d.getMonth() + 1) + '-'
+            + pad(d.getDate()) + 'T'
+            + pad(d.getHours()) + ':'
+            + pad(d.getMinutes());
+    }
+
+    function refreshList() {
+        // Do not disrupt an open edit modal.
+        if (document.getElementById('edit-backdrop').classList.contains('open')) { return; }
+
+        var params = new URLSearchParams(window.location.search);
+        fetch('api/rows.php?' + params.toString())
+            .then(function (r) { return r.ok ? r.text() : Promise.reject(r.status); })
+            .then(function (html) { refreshTbody.innerHTML = html; })
+            .catch(function () { /* silently ignore network errors */ });
+
+        if (!dateUserModified && document.activeElement !== refreshDate) {
+            refreshDate.value = nowDatetimeLocal();
+        }
+    }
+
+    setInterval(refreshList, 30000);
 }());
 </script>
 </body>
