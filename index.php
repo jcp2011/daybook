@@ -73,6 +73,31 @@ $show_archived = ($_GET['view'] ?? '') === 'archived';
 $instructions  = fetch_instructions($db, $show_archived, $sort);
 $has_logo      = file_exists(__DIR__ . '/assets/logo.png');
 
+$emoji_langs = [];
+foreach (glob(__DIR__ . '/assets/emoji-picker/*/emojibase/data.json') ?: [] as $p) {
+    $emoji_langs[] = basename(dirname(dirname($p)));
+}
+sort($emoji_langs);
+if (!in_array('en', $emoji_langs, true)) {
+    $emoji_langs[] = 'en';
+}
+
+// Detect browser language from the Accept-Language header (e.g. "fr-FR,fr;q=0.9,en;q=0.8").
+$accept_lang  = $_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? 'en';
+$browser_lang = strtolower(substr($accept_lang, 0, 2));
+$emoji_lang   = in_array($browser_lang, $emoji_langs, true) ? $browser_lang : 'en';
+
+// Embed the i18n translations inline so JS never needs a dynamic import().
+$emoji_i18n_js = 'null';
+if ($emoji_lang !== 'en') {
+    $i18n_file = __DIR__ . '/assets/emoji-picker/i18n/' . $emoji_lang . '.js';
+    if (is_file($i18n_file)) {
+        $raw           = file_get_contents($i18n_file);
+        $stripped      = (string) preg_replace('/^\s*export\s+default\s+/u', '', trim((string) $raw));
+        $emoji_i18n_js = rtrim($stripped, ';');
+    }
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -515,11 +540,16 @@ $has_logo      = file_exists(__DIR__ . '/assets/logo.png');
     // --- Emoji picker ---
 
     customElements.whenDefined('emoji-picker').then(function () {
+        var lang = <?= json_encode($emoji_lang) ?>;
+        var i18n = <?= $emoji_i18n_js ?>;
+
         var activeQuill     = null;
         var activeSelection = null;
 
-        var picker          = document.createElement('emoji-picker');
-        picker.dataSource   = new URL('assets/emoji-picker/en/emojibase/data.json', document.baseURI).href;
+        var picker    = document.createElement('emoji-picker');
+        picker.locale = lang;
+        picker.dataSource = new URL('assets/emoji-picker/' + lang + '/emojibase/data.json', document.baseURI).href;
+        if (i18n) { picker.i18n = i18n; }
         picker.style.display = 'none';
         document.body.appendChild(picker);
 
@@ -583,7 +613,7 @@ $has_logo      = file_exists(__DIR__ . '/assets/logo.png');
 
         addEmojiToggle(quill);
         addEmojiToggle(editQuill);
-    });
+    }); // customElements.whenDefined
 }());
 </script>
 </body>
