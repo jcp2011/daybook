@@ -244,7 +244,7 @@ if ($emoji_lang !== 'en') {
     Quill.register(Quill.import('attributors/style/background'), true);
 
     var toolbar = [
-        ['bold', 'italic', 'link'],
+        ['bold', 'italic', 'strike', 'link'],
         [{ color: [] }, { background: [] }],
         [{ size: ['11px', false, '16px', '20px', '28px', '40px'] }],
         [{ list: 'ordered' }, { list: 'bullet' }],

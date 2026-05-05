@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 const DB_PATH            = __DIR__ . '/../data/instructions.db';
-const ALLOWED_HTML_TAGS  = ['p', 'br', 'strong', 'em', 'span', 'ol', 'ul', 'li', 'a'];
+const ALLOWED_HTML_TAGS  = ['p', 'br', 'strong', 'em', 's', 'span', 'ol', 'ul', 'li', 'a'];
 const ALLOWED_STYLE_PROPS = ['color', 'background-color', 'font-size'];
 
 /**
