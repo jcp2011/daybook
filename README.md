@@ -28,7 +28,7 @@ The SQLite database is created automatically at `data/instructions.db` on the fi
 
 - Add instructions with a date/time and a plain or rich text description
 - Rich text editor (Quill.js, fully local — no CDN) with:
-  - Bold, italic
+  - Bold, italic, strikethrough
   - Text colour, background colour, font size
   - Ordered and unordered lists
   - Hyperlinks (http, https, mailto — unsafe schemes are stripped on save)
