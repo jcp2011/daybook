@@ -1,15 +1,26 @@
 services:
   daybook:
     image: daybook:latest
-    ports:
-      - target: 80
-        published: 80
-        protocol: tcp
-        mode: host
+
     environment:
       - DAYBOOK_FQDN
     security_opt:
       - no-new-privileges:true
+    labels:
+      - "traefik.enable=true"
+      # Replace daybook.company.com with your actual FQDN before deploying.
+      - "traefik.http.routers.daybook.rule=Host(`daybook.company.com`)"
+      - "traefik.http.routers.daybook.entrypoints=websecure"
+      - "traefik.http.routers.daybook.tls=true"
+      - "traefik.http.services.daybook.loadbalancer.server.port=80"
+      # Session stickiness: ensures all requests from the same browser reach the
+      # same container, preventing PHP session loss when replicas > 1.
+      - "traefik.http.services.daybook.loadbalancer.sticky.cookie=true"
+      - "traefik.http.services.daybook.loadbalancer.sticky.cookie.name=daybook_sticky"
+      - "traefik.http.services.daybook.loadbalancer.sticky.cookie.secure=true"
+      - "traefik.http.services.daybook.loadbalancer.sticky.cookie.httponly=true"
+    networks:
+      - traefik-public
     volumes:
       # Web root: only public-facing files. No secrets, no source, no config.
       - ./public:/var/www/html:ro
@@ -21,12 +32,15 @@ services:
       - ./daybook.keytab:/run/secrets/daybook.keytab:ro
       # Data directory: writable named volume (SQLite database).
       - daybook-data:/var/www/data
-      # Security config files: mounted so they can be tuned per deployment
-      # (e.g. cookie_secure, ServerTokens) without rebuilding the image.
+      # Apache and PHP config: mounted so they can be tuned without rebuilding.
       - ./docker/apache.conf:/etc/apache2/sites-enabled/000-default.conf:ro
       - ./docker/security.conf:/etc/apache2/conf-enabled/99-security.conf:ro
       - ./docker/php-security.ini:/usr/local/etc/php/conf.d/99-security.ini:ro
     restart: unless-stopped
+
+networks:
+  traefik-public:
+    external: true
 
 volumes:
   daybook-data:

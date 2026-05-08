@@ -5,12 +5,11 @@ services:
     # Drop all Linux capabilities and add back only what Apache + mod_auth_gssapi
     # requires at startup. Worker processes run as www-data and need none of these.
     #
-    # CHOWN          - Apache chowns its pid and lock files on startup.
-    # DAC_OVERRIDE   - Read config files and keytab regardless of file ownership.
-    # NET_BIND_SERVICE - Bind to port 80 (privileged port, required even for root
-    #                  when all capabilities are dropped).
-    # SETGID         - Drop from root to www-data group after binding the port.
-    # SETUID         - Drop from root to www-data user after binding the port.
+    # CHOWN            - Apache chowns its pid and lock files on startup.
+    # DAC_OVERRIDE     - Read config files and keytab regardless of file ownership.
+    # NET_BIND_SERVICE - Bind to port 80 inside the container (privileged port).
+    # SETGID           - Drop from root to www-data group after binding the port.
+    # SETUID           - Drop from root to www-data user after binding the port.
     cap_drop:
       - ALL
     cap_add:
@@ -20,17 +19,11 @@ services:
       - SETGID
       - SETUID
 
-    ports:
-      - target: 80
-        published: 80
-        protocol: tcp
-        # mode: host publishes the port directly on the node network stack,
-        # bypassing the Swarm routing mesh. Required for Kerberos SPNEGO because
-        # the browser must reach the exact container that holds the session.
-        mode: host
-
     environment:
       - DAYBOOK_FQDN
+
+    networks:
+      - traefik-public
 
     volumes:
       - ./public:/var/www/html:ro
@@ -55,6 +48,21 @@ services:
 
     deploy:
       replicas: 1
+
+      # Traefik reads labels from deploy.labels in Swarm mode.
+      # Replace daybook.company.com with your actual FQDN before deploying.
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.daybook.rule=Host(`daybook.company.com`)"
+        - "traefik.http.routers.daybook.entrypoints=websecure"
+        - "traefik.http.routers.daybook.tls=true"
+        - "traefik.http.services.daybook.loadbalancer.server.port=80"
+        # Session stickiness: ensures all requests from the same browser reach the
+        # same container, preventing PHP session loss when replicas > 1.
+        - "traefik.http.services.daybook.loadbalancer.sticky.cookie=true"
+        - "traefik.http.services.daybook.loadbalancer.sticky.cookie.name=daybook_sticky"
+        - "traefik.http.services.daybook.loadbalancer.sticky.cookie.secure=true"
+        - "traefik.http.services.daybook.loadbalancer.sticky.cookie.httponly=true"
 
       resources:
         limits:
@@ -97,6 +105,10 @@ services:
         # Stop the failed container before starting the previous one during
         # rollback (safe default for a single replica).
         order: stop-first
+
+networks:
+  traefik-public:
+    external: true
 
 volumes:
   daybook-data:
