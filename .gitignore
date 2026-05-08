@@ -1,5 +1,6 @@
 data/
 .env
+daybook.keytab
 .php-cs-fixer.cache
 .phpunit.result.cache
 assets/logo*

@@ -1,0 +1,102 @@
+services:
+  daybook:
+    image: daybook:latest
+
+    # Drop all Linux capabilities and add back only what Apache + mod_auth_gssapi
+    # requires at startup. Worker processes run as www-data and need none of these.
+    #
+    # CHOWN          - Apache chowns its pid and lock files on startup.
+    # DAC_OVERRIDE   - Read config files and keytab regardless of file ownership.
+    # NET_BIND_SERVICE - Bind to port 80 (privileged port, required even for root
+    #                  when all capabilities are dropped).
+    # SETGID         - Drop from root to www-data group after binding the port.
+    # SETUID         - Drop from root to www-data user after binding the port.
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - NET_BIND_SERVICE
+      - SETGID
+      - SETUID
+
+    ports:
+      - target: 80
+        published: 80
+        protocol: tcp
+        # mode: host publishes the port directly on the node network stack,
+        # bypassing the Swarm routing mesh. Required for Kerberos SPNEGO because
+        # the browser must reach the exact container that holds the session.
+        mode: host
+
+    environment:
+      - DAYBOOK_FQDN
+
+    volumes:
+      - ./public:/var/www/html:ro
+      - ./src:/var/www/src:ro
+      - ./templates:/var/www/templates:ro
+      - ./.env:/var/www/.env:ro
+      - ./daybook.keytab:/run/secrets/daybook.keytab:ro
+      - daybook-data:/var/www/data
+      - ./docker/apache.conf:/etc/apache2/sites-enabled/000-default.conf:ro
+      - ./docker/security.conf:/etc/apache2/conf-enabled/99-security.conf:ro
+      - ./docker/php-security.ini:/usr/local/etc/php/conf.d/99-security.ini:ro
+
+    # HTTP probe against the local Apache instance.
+    # Returns 200 (login form) when auth is enabled, or the dashboard when disabled.
+    # start_period gives Apache time to complete its startup before retries count.
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-s", "--max-time", "5", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    deploy:
+      replicas: 1
+
+      resources:
+        limits:
+          # Adjust to fit your node. A small internal app rarely exceeds 128 MB
+          # under normal load; 256 MB leaves headroom for spikes.
+          cpus: '1.0'
+          memory: 256M
+          # Cap the total number of processes/threads the container may create.
+          # Apache event MPM uses a handful of processes; 100 is generous for
+          # a single-user internal application.
+          pids: 100
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+      restart_policy:
+        # Restart only on failure, not on deliberate stop (e.g. maintenance).
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        # Reset the failure counter after 2 minutes of healthy operation.
+        window: 120s
+
+      update_config:
+        parallelism: 1
+        delay: 10s
+        # Automatically roll back to the previous image if the update fails the
+        # healthcheck within the monitor period.
+        failure_action: rollback
+        monitor: 30s
+        # Start the new container before stopping the old one so there is no
+        # downtime window during a rolling update (requires replicas >= 1).
+        order: start-first
+
+      rollback_config:
+        parallelism: 1
+        delay: 0s
+        # Pause on rollback failure rather than looping; requires human intervention.
+        failure_action: pause
+        # Stop the failed container before starting the previous one during
+        # rollback (safe default for a single replica).
+        order: stop-first
+
+volumes:
+  daybook-data:
