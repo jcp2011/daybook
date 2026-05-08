@@ -2,9 +2,47 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../src/functions.php';
+require_once __DIR__ . '/../../src/Env.php';
+require_once __DIR__ . '/../../src/Exception/AuthenticationException.php';
+require_once __DIR__ . '/../../src/Exception/AuthorizationException.php';
+require_once __DIR__ . '/../../src/Auth/Authenticator.php';
+require_once __DIR__ . '/../../src/functions.php';
 
 apply_system_timezone();
+App\Env::load(__DIR__ . '/../../.env');
+
+$authEnabled = strtolower(trim(App\Env::get('AUTH_ENABLED') ?? 'true')) !== 'false';
+
+if ($authEnabled) {
+    session_set_cookie_params(['httponly' => true, 'samesite' => 'Strict']);
+    session_start();
+
+    $auth = new App\Auth\Authenticator([
+        'LDAP_HOST'             => App\Env::require('LDAP_HOST'),
+        'LDAP_PORT'             => App\Env::require('LDAP_PORT'),
+        'LDAP_DOMAIN'           => App\Env::require('LDAP_DOMAIN'),
+        'LDAP_BASE_DN'          => App\Env::require('LDAP_BASE_DN'),
+        'LDAP_SERVICE_DN'       => App\Env::require('LDAP_SERVICE_DN'),
+        'LDAP_SERVICE_PASSWORD' => App\Env::require('LDAP_SERVICE_PASSWORD'),
+        'LDAP_REQUIRED_GROUP'   => App\Env::require('LDAP_REQUIRED_GROUP'),
+    ]);
+
+    // Kerberos SSO path: sync REMOTE_USER into session on first request.
+    if (isset($_SERVER['REMOTE_USER']) && $auth->getAuthenticatedUser() === null) {
+        try {
+            $auth->verifyGroupMembership((string) $_SERVER['REMOTE_USER']);
+            $auth->startSession((string) $_SERVER['REMOTE_USER']);
+        } catch (\Exception) {
+            http_response_code(401);
+            exit;
+        }
+    }
+
+    if ($auth->getAuthenticatedUser() === null) {
+        http_response_code(401);
+        exit;
+    }
+}
 
 header('Content-Type: text/html; charset=UTF-8');
 header('Cache-Control: no-store');

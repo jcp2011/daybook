@@ -8,9 +8,87 @@ declare(strict_types=1);
 // templates/layout.php with a shared templates/partials/rows.php (fixes the
 // DRY violation with api/rows.php), and extract inline JS to assets/app.js.
 
-require_once __DIR__ . '/src/functions.php';
+require_once __DIR__ . '/../src/Env.php';
+require_once __DIR__ . '/../src/Exception/AuthenticationException.php';
+require_once __DIR__ . '/../src/Exception/AuthorizationException.php';
+require_once __DIR__ . '/../src/Auth/Authenticator.php';
+require_once __DIR__ . '/../src/functions.php';
 
 apply_system_timezone();
+App\Env::load(__DIR__ . '/../.env');
+
+$authEnabled = strtolower(trim(App\Env::get('AUTH_ENABLED') ?? 'true')) !== 'false';
+$currentUser = null;
+
+if ($authEnabled) {
+    session_set_cookie_params(['httponly' => true, 'samesite' => 'Strict']);
+    session_start();
+
+    $auth = new App\Auth\Authenticator([
+        'LDAP_HOST'             => App\Env::require('LDAP_HOST'),
+        'LDAP_PORT'             => App\Env::require('LDAP_PORT'),
+        'LDAP_DOMAIN'           => App\Env::require('LDAP_DOMAIN'),
+        'LDAP_BASE_DN'          => App\Env::require('LDAP_BASE_DN'),
+        'LDAP_SERVICE_DN'       => App\Env::require('LDAP_SERVICE_DN'),
+        'LDAP_SERVICE_PASSWORD' => App\Env::require('LDAP_SERVICE_PASSWORD'),
+        'LDAP_REQUIRED_GROUP'   => App\Env::require('LDAP_REQUIRED_GROUP'),
+    ]);
+
+    // Kerberos SSO path: Apache validated identity, PHP must still check group membership.
+    if (isset($_SERVER['REMOTE_USER']) && $auth->getAuthenticatedUser() === null) {
+        try {
+            $auth->verifyGroupMembership((string) $_SERVER['REMOTE_USER']);
+            $auth->startSession((string) $_SERVER['REMOTE_USER']);
+        } catch (App\Exception\AuthorizationException) {
+            $loginError = 'Invalid credentials.';
+            require __DIR__ . '/../templates/login.php';
+            exit;
+        } catch (App\Exception\AuthenticationException) {
+            $loginError = 'Authentication service unavailable. Try again later.';
+            require __DIR__ . '/../templates/login.php';
+            exit;
+        }
+    }
+
+    // Login form POST
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'login') {
+        $username   = trim((string) ($_POST['username'] ?? ''));
+        $password   = (string) ($_POST['password'] ?? '');
+        $loginError = '';
+        try {
+            $samAccountName = $auth->authenticateWithLdap($username, $password);
+            if ($samAccountName !== false) {
+                $auth->startSession($samAccountName);
+                header('Location: ' . $_SERVER['PHP_SELF']);
+                exit;
+            }
+            $loginError = 'Invalid credentials.';
+        } catch (App\Exception\AuthorizationException) {
+            $loginError = 'Invalid credentials.';
+        } catch (App\Exception\AuthenticationException) {
+            $loginError = 'Authentication service unavailable. Try again later.';
+        }
+        require __DIR__ . '/../templates/login.php';
+        exit;
+    }
+
+    // Logout POST
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'logout') {
+        $auth->logout();
+        header('Location: ' . $_SERVER['PHP_SELF']);
+        exit;
+    }
+
+    // Auth guard: show login form if no valid session exists.
+    $currentUser = $auth->getAuthenticatedUser();
+    if ($currentUser === null) {
+        $loginError = '';
+        require __DIR__ . '/../templates/login.php';
+        exit;
+    }
+} else {
+    $currentUser = 'local';
+}
 
 // --- Handle POST (PRG pattern) ---
 
@@ -123,6 +201,15 @@ if ($emoji_lang !== 'en') {
         <img src="assets/logo.png" alt="Logo" class="logo">
     <?php else: ?>
         <div class="logo-placeholder">Place logo here</div>
+    <?php endif ?>
+    <?php if ($authEnabled): ?>
+        <div class="user-info">
+            <span class="username"><?= h((string) $currentUser) ?></span>
+            <form method="post" style="display:inline">
+                <input type="hidden" name="action" value="logout">
+                <button type="submit" class="btn btn-ghost">Logout</button>
+            </form>
+        </div>
     <?php endif ?>
 </header>
 
