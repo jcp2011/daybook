@@ -1,4 +1,4 @@
-FROM php:8.3-apache
+FROM php:8.3-apache-trixie
 
 # Full distro upgrade to eliminate known CVEs in the base image packages.
 # Rebuild the image periodically to keep up with new fixes.
