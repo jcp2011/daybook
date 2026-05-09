@@ -52,7 +52,23 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Scan image with Trivy
+      # Primary scan: results printed directly in the workflow log.
+      - name: Scan image with Trivy (table)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: jc201176/daybook:latest
+          format: table
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+        env:
+          TRIVY_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          TRIVY_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Optional: publish results to the GitHub Security tab.
+      # Requires GitHub Advanced Security (included on public repos and paid plans).
+      # The workflow does not fail if this step is unavailable.
+      - name: Scan image with Trivy (SARIF)
+        if: always()
         uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: jc201176/daybook:latest
@@ -63,9 +79,9 @@ jobs:
           TRIVY_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           TRIVY_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Requires GitHub Advanced Security (included on public repos and paid plans).
       - name: Upload Trivy results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
         if: always()
+        continue-on-error: true
         with:
           sarif_file: trivy-results.sarif
