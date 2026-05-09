@@ -54,7 +54,7 @@ jobs:
 
       # Primary scan: results printed directly in the workflow log.
       - name: Scan image with Trivy (table)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: jc201176/daybook:latest
           format: table
@@ -69,7 +69,7 @@ jobs:
       # The workflow does not fail if this step is unavailable.
       - name: Scan image with Trivy (SARIF)
         if: always()
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: jc201176/daybook:latest
           format: sarif
