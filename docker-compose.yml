@@ -35,7 +35,7 @@ services:
       # Apache and PHP config: mounted so they can be tuned without rebuilding.
       - ./docker/apache.conf:/etc/apache2/sites-enabled/000-default.conf:ro
       - ./docker/security.conf:/etc/apache2/conf-enabled/99-security.conf:ro
-      - ./docker/php-security.ini:/usr/local/etc/php/conf.d/99-security.ini:ro
+      - ./docker/php-security.ini:/etc/php/apache2-conf.d/99-security.ini:ro
     restart: unless-stopped
 
 networks:
