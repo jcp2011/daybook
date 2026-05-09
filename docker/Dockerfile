@@ -12,7 +12,7 @@ RUN apt-get update \
         php-ldap \
         php-intl \
         krb5-user \
-        wget \
+        curl \
     && a2enmod rewrite headers auth_gssapi \
     && a2dismod status autoindex 2>/dev/null || true \
     && PHP_VERSION=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;') \
