@@ -9,8 +9,10 @@ RUN apt-get update \
         krb5-user \
         libldap2-dev \
         libicu-dev \
-        curl \
+        wget \
     && docker-php-ext-install pdo_sqlite ldap intl \
+    && apt-get purge -y libldap2-dev libicu-dev \
+    && apt-get autoremove -y \
     && a2enmod auth_gssapi rewrite headers \
     && a2dismod status autoindex 2>/dev/null || true \
     && rm -rf /var/lib/apt/lists/*

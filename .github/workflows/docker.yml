@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - docker
+  # Rebuild weekly so apt-get dist-upgrade picks up newly released Debian
+  # security patches without requiring a code change to trigger the pipeline.
+  schedule:
+    - cron: '0 3 * * 1'  # every Monday at 03:00 UTC
 
 permissions:
   contents: read
