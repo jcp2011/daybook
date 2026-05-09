@@ -9,7 +9,7 @@ RUN apt-get update \
         krb5-user \
         libldap2-dev \
         libicu-dev \
-        wget \
+        curl \
     && docker-php-ext-install pdo_sqlite ldap intl \
     && apt-get purge -y libldap2-dev libicu-dev \
     && apt-get autoremove -y \
