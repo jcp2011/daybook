@@ -150,6 +150,15 @@ class Authenticator
         ldap_set_option($conn, LDAP_OPT_PROTOCOL_VERSION, 3);
         ldap_set_option($conn, LDAP_OPT_REFERRALS, 0);
 
+        // Point the OpenLDAP client at the AD root CA so LDAPS certificate
+        // verification succeeds. The cert is mounted as a read-only secret;
+        // skipping this when the path is absent lets AUTH_ENABLED=false work
+        // without the file present.
+        $caCert = $this->config['LDAP_CA_CERT'] ?? '';
+        if ($caCert !== '' && file_exists($caCert)) {
+            ldap_set_option($conn, LDAP_OPT_X_TLS_CACERTFILE, $caCert);
+        }
+
         return $conn;
     }
 

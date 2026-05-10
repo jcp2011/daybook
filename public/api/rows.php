@@ -25,6 +25,7 @@ if ($authEnabled) {
         'LDAP_SERVICE_DN'       => App\Env::require('LDAP_SERVICE_DN'),
         'LDAP_SERVICE_PASSWORD' => App\Env::require('LDAP_SERVICE_PASSWORD'),
         'LDAP_REQUIRED_GROUP'   => App\Env::require('LDAP_REQUIRED_GROUP'),
+        'LDAP_CA_CERT'          => App\Env::get('LDAP_CA_CERT') ?? '',
     ]);
 
     // Kerberos SSO path: sync REMOTE_USER into session on first request.
