@@ -42,7 +42,6 @@ jobs:
           images: jc201176/daybook
           tags: |
             type=raw,value=latest
-            type=sha,prefix=sha-
 
       - name: Build and push
         uses: docker/build-push-action@v6
