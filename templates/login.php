@@ -119,5 +119,12 @@ $loginError = isset($loginError) && is_string($loginError) ? $loginError : '';
         <button type="submit">Sign in</button>
     </form>
 </div>
+<script>
+(function () {
+    fetch('/sso.php', {credentials: 'include'})
+        .then(function (r) { if (r.ok) window.location.reload(); })
+        .catch(function () {});
+}());
+</script>
 </body>
 </html>
