@@ -39,11 +39,13 @@ if ($authEnabled) {
         try {
             $auth->verifyGroupMembership((string) $_SERVER['REMOTE_USER']);
             $auth->startSession((string) $_SERVER['REMOTE_USER']);
-        } catch (App\Exception\AuthorizationException) {
+        } catch (App\Exception\AuthorizationException $e) {
+            error_log('[Daybook] SSO authorization failed: ' . $e->getMessage());
             $loginError = 'Invalid credentials.';
             require __DIR__ . '/../templates/login.php';
             exit;
-        } catch (App\Exception\AuthenticationException) {
+        } catch (App\Exception\AuthenticationException $e) {
+            error_log('[Daybook] SSO authentication error: ' . $e->getMessage());
             $loginError = 'Authentication service unavailable. Try again later.';
             require __DIR__ . '/../templates/login.php';
             exit;
@@ -62,10 +64,13 @@ if ($authEnabled) {
                 header('Location: ' . $_SERVER['PHP_SELF']);
                 exit;
             }
+            error_log('[Daybook] LDAP bind rejected for user: ' . $username);
             $loginError = 'Invalid credentials.';
-        } catch (App\Exception\AuthorizationException) {
+        } catch (App\Exception\AuthorizationException $e) {
+            error_log('[Daybook] Authorization failed: ' . $e->getMessage());
             $loginError = 'Invalid credentials.';
-        } catch (App\Exception\AuthenticationException) {
+        } catch (App\Exception\AuthenticationException $e) {
+            error_log('[Daybook] Authentication error: ' . $e->getMessage());
             $loginError = 'Authentication service unavailable. Try again later.';
         }
         require __DIR__ . '/../templates/login.php';
