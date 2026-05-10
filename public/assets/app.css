@@ -86,6 +86,12 @@ body {
     margin-bottom: 1.5rem;
 }
 
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
 .logo { max-height: 60px; width: auto; display: block; }
 
 .logo-placeholder {

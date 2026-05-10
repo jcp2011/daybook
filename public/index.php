@@ -203,20 +203,22 @@ if ($emoji_lang !== 'en') {
 
 <header class="page-header">
     <h1>Daybook</h1>
-    <?php if ($has_logo): ?>
-        <img src="assets/logo.png" alt="Logo" class="logo">
-    <?php else: ?>
-        <div class="logo-placeholder">Place logo here</div>
-    <?php endif ?>
-    <?php if ($authEnabled): ?>
-        <div class="user-info">
-            <span class="username"><?= h((string) $currentUser) ?></span>
-            <form method="post" style="display:inline">
-                <input type="hidden" name="action" value="logout">
-                <button type="submit" class="btn btn-ghost">Logout</button>
-            </form>
-        </div>
-    <?php endif ?>
+    <div class="header-right">
+        <?php if ($has_logo): ?>
+            <img src="assets/logo.png" alt="Logo" class="logo">
+        <?php else: ?>
+            <div class="logo-placeholder">Place logo here</div>
+        <?php endif ?>
+        <?php if ($authEnabled): ?>
+            <div class="user-info">
+                <span class="username"><?= h((string) $currentUser) ?></span>
+                <form method="post" style="display:inline">
+                    <input type="hidden" name="action" value="logout">
+                    <button type="submit" class="btn btn-ghost">Logout</button>
+                </form>
+            </div>
+        <?php endif ?>
+    </div>
 </header>
 
 <?php if ($error !== ''): ?>
