@@ -30,13 +30,19 @@ services:
       - ./src:/var/www/src:ro
       - ./templates:/var/www/templates:ro
       - ./.env:/var/www/.env:ro
-      - ./daybook.keytab:/run/secrets/daybook.keytab:ro
-      - ./ad-ca.crt:/run/secrets/ad-ca.crt:ro
+      - ./daybook.keytab:/run/secrets/daybook.keytab
+      - ./ad-ca.crt:/run/secrets/ad-ca.crt
       - ./docker/ldap.conf:/etc/ldap/ldap.conf:ro
       - daybook-data:/var/www/data
       - ./docker/apache.conf:/etc/apache2/sites-enabled/000-default.conf:ro
       - ./docker/security.conf:/etc/apache2/conf-enabled/99-security.conf:ro
       - ./docker/php-security.ini:/etc/php/apache2-conf.d/99-security.ini:ro
+      - ./docker/krb5.conf:/etc/krb5.conf:ro
+
+    command: >-
+      sh -c "chown root:www-data /run/secrets/daybook.keytab /run/secrets/ad-ca.crt
+             && chmod 440 /run/secrets/daybook.keytab /run/secrets/ad-ca.crt
+             && exec apache2-foreground"
 
     # HTTP probe against the local Apache instance.
     # Returns 200 (login form) when auth is enabled, or the dashboard when disabled.

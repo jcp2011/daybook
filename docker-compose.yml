@@ -29,8 +29,8 @@ services:
       - ./templates:/var/www/templates:ro
       # Secrets and config: outside the web root, never baked into the image.
       - ./.env:/var/www/.env:ro
-      - ./daybook.keytab:/run/secrets/daybook.keytab:ro
-      - ./ad-ca.crt:/run/secrets/ad-ca.crt:ro
+      - ./daybook.keytab:/run/secrets/daybook.keytab
+      - ./ad-ca.crt:/run/secrets/ad-ca.crt
       - ./docker/ldap.conf:/etc/ldap/ldap.conf:ro
       # Data directory: writable named volume (SQLite database).
       - daybook-data:/var/www/data
@@ -38,6 +38,15 @@ services:
       - ./docker/apache.conf:/etc/apache2/sites-enabled/000-default.conf:ro
       - ./docker/security.conf:/etc/apache2/conf-enabled/99-security.conf:ro
       - ./docker/php-security.ini:/etc/php/apache2-conf.d/99-security.ini:ro
+      - ./docker/krb5.conf:/etc/krb5.conf:ro
+    # Fix secret file permissions before starting Apache.
+    # :ro cannot be used on these mounts because chown/chmod fail on read-only bind mounts.
+    # chmod 440 (root:www-data) keeps the files unreadable to all other processes.
+    # exec replaces the shell with apache2-foreground so Apache runs as PID 1.
+    command: >-
+      sh -c "chown root:www-data /run/secrets/daybook.keytab /run/secrets/ad-ca.crt
+             && chmod 440 /run/secrets/daybook.keytab /run/secrets/ad-ca.crt
+             && exec apache2-foreground"
     restart: unless-stopped
 
 networks:
