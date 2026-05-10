@@ -11,6 +11,7 @@ RUN apt-get update \
         php-sqlite3 \
         php-ldap \
         php-intl \
+        php-xml \
         krb5-user \
         curl \
     && a2enmod rewrite headers auth_gssapi \
