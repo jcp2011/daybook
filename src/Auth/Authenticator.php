@@ -138,6 +138,16 @@ class Authenticator
      */
     private function connect(): \LDAP\Connection
     {
+        // Must be set globally on null before ldap_connect() — the TLS context
+        // is initialised at connect time and ignores per-connection options set later.
+        // /etc/ldap/ldap.conf (mounted at runtime) is the primary mechanism;
+        // this is a belt-and-suspenders fallback for environments where the
+        // LDAP_CA_CERT env variable is explicitly set.
+        $caCert = $this->config['LDAP_CA_CERT'] ?? '';
+        if ($caCert !== '' && file_exists($caCert)) {
+            ldap_set_option(null, LDAP_OPT_X_TLS_CACERTFILE, $caCert);
+        }
+
         $uri  = sprintf('ldaps://%s:%d', $this->config['LDAP_HOST'], (int) $this->config['LDAP_PORT']);
         $conn = ldap_connect($uri);
 
@@ -149,15 +159,6 @@ class Authenticator
 
         ldap_set_option($conn, LDAP_OPT_PROTOCOL_VERSION, 3);
         ldap_set_option($conn, LDAP_OPT_REFERRALS, 0);
-
-        // Point the OpenLDAP client at the AD root CA so LDAPS certificate
-        // verification succeeds. The cert is mounted as a read-only secret;
-        // skipping this when the path is absent lets AUTH_ENABLED=false work
-        // without the file present.
-        $caCert = $this->config['LDAP_CA_CERT'] ?? '';
-        if ($caCert !== '' && file_exists($caCert)) {
-            ldap_set_option($conn, LDAP_OPT_X_TLS_CACERTFILE, $caCert);
-        }
 
         return $conn;
     }
