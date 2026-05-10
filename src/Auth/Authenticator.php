@@ -65,9 +65,11 @@ class Authenticator
         restore_error_handler();
 
         if (!$bound) {
+            $diagnostic = '';
             ldap_get_option($conn, LDAP_OPT_DIAGNOSTIC_MESSAGE, $diagnostic);
             ldap_unbind($conn);
-            error_log('[Daybook] LDAP user bind failed — ' . ($diagnostic ?: 'no diagnostic message'));
+            $msg = is_string($diagnostic) && $diagnostic !== '' ? $diagnostic : 'no diagnostic message';
+            error_log('[Daybook] LDAP user bind failed - ' . $msg);
 
             return false;
         }

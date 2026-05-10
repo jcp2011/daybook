@@ -85,11 +85,23 @@ if ($authEnabled) {
         exit;
     }
 
-    // Auth guard: show login form if no valid session exists.
+    // Auth guard.
     $currentUser = $auth->getAuthenticatedUser();
     if ($currentUser === null) {
-        $loginError = '';
-        require __DIR__ . '/../templates/login.php';
+        if (isset($_SERVER['REDIRECT_STATUS'])) {
+            // Rendered as an internal ErrorDocument redirect from /sso.php.
+            // Do NOT reset the 401 status: Kerberos-capable browsers see 401 +
+            // WWW-Authenticate: Negotiate and transparently retry with their
+            // ticket. Non-Kerberos browsers render this HTML body instead.
+            $loginError = '';
+            require __DIR__ . '/../templates/login.php';
+            exit;
+        }
+        // No session yet - redirect to the SSO endpoint so the browser performs
+        // a full top-level navigation. Chromium-based browsers on domain-joined
+        // machines respond to the resulting 401+Negotiate challenge automatically
+        // (challenged negotiation works without intranet zone configuration).
+        header('Location: /sso.php');
         exit;
     }
 } else {

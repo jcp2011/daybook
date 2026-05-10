@@ -7,10 +7,13 @@ declare(strict_types=1);
  *
  * Apache enforces SPNEGO on this URL (see docker/apache.conf).
  * On a successful Kerberos negotiation Apache sets REMOTE_USER before PHP runs.
- * This script verifies group membership and creates the PHP session.
+ * This script verifies group membership, creates the PHP session, and redirects
+ * to the application root.
  *
- * Called via a silent fetch() from the login form — never navigated to directly.
- * Returns 200 on success, 401/403/503 on failure (no body needed).
+ * Unauthenticated users are redirected here by index.php so the browser performs
+ * a full top-level navigation. Apache challenges with 401+WWW-Authenticate:Negotiate;
+ * domain-joined browsers respond automatically. Non-Kerberos clients get 401 which
+ * Apache maps to index.php via ErrorDocument, showing the LDAPS login form.
  */
 
 require_once __DIR__ . '/../src/Env.php';
@@ -47,14 +50,15 @@ $auth = new App\Auth\Authenticator([
 ]);
 
 if ($auth->getAuthenticatedUser() !== null) {
-    http_response_code(200);
+    header('Location: /');
     exit;
 }
 
 try {
     $auth->verifyGroupMembership((string) $_SERVER['REMOTE_USER']);
     $auth->startSession((string) $_SERVER['REMOTE_USER']);
-    http_response_code(200);
+    header('Location: /');
+    exit;
 } catch (App\Exception\AuthorizationException $e) {
     error_log('[Daybook] SSO authorization failed: ' . $e->getMessage());
     http_response_code(403);
