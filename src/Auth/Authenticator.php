@@ -63,14 +63,16 @@ class Authenticator
         set_error_handler(static fn (): bool => true);
         $bound = ldap_bind($conn, $this->buildUpn($username), $password);
         restore_error_handler();
-        ldap_unbind($conn);
 
         if (!$bound) {
             ldap_get_option($conn, LDAP_OPT_DIAGNOSTIC_MESSAGE, $diagnostic);
+            ldap_unbind($conn);
             error_log('[Daybook] LDAP user bind failed — ' . ($diagnostic ?: 'no diagnostic message'));
 
             return false;
         }
+
+        ldap_unbind($conn);
 
         $this->verifyGroupMembership($samAccountName);
 
