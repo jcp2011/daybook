@@ -356,13 +356,81 @@ ktpass /princ HTTP/daybook.company.com@COMPANY.COM ^
 klist -kt daybook.keytab
 
 # Transfer to the Docker host via a secure channel (not email, not unencrypted share).
-# Set restrictive permissions:
-chmod 400 daybook.keytab
+# Place it at ./daybook.keytab in the project root.
+# Ownership and permissions (root:www-data 440) are set automatically by the
+# container entrypoint on every start - no manual chmod/chown needed.
 ```
 
 **Keytab rotation:** when the service account password is rotated in AD, re-run
 `ktpass` with `/kvno` incremented by 1 (or use `/kvno 0` to auto-assign) and
 replace `./daybook.keytab` on the host. Restart the container to reload it.
+
+### AD CA certificate
+
+The LDAPS connection to the Domain Controller is verified against the AD root
+CA certificate. The certificate must be placed at `./ad-ca.crt` in the project
+root before starting the container.
+
+**Obtaining the certificate from the Domain Controller (Windows):**
+
+```bat
+:: Run on the DC or any domain-joined machine as a Domain Admin.
+:: Exports the root CA certificate in PEM (Base-64) format.
+certutil -ca.cert ad-ca.cer
+```
+
+Then transfer `ad-ca.cer` to the Docker host and rename it to `ad-ca.crt`.
+
+Alternatively, retrieve it over the network from any Linux machine:
+
+```bash
+openssl s_client -connect dc.company.com:636 -showcerts < /dev/null 2>/dev/null \
+  | openssl x509 -out ad-ca.crt
+```
+
+Place the file at `./ad-ca.crt` in the project root. Ownership and permissions
+(`root:www-data 440`) are set automatically by the container entrypoint on every
+start - no manual `chmod`/`chown` needed.
+
+The file path inside the container is controlled by `LDAP_CA_CERT` in `.env`
+(default: `/run/secrets/ad-ca.crt`, matching the volume mount in
+`docker-compose.yml`).
+
+### Browser GPO for silent SSO
+
+Without a Group Policy, Chromium-based browsers (Edge, Chrome) will not send
+Kerberos tokens automatically. The user sees a native Windows credential dialog
+pre-filled with their domain account - Kerberos is still used, but SSO is not
+silent.
+
+To enable fully transparent SSO (no prompt), deploy the following GPO to all
+domain-joined client machines:
+
+**Option 1 - Chromium HTTP authentication policy (recommended)**
+
+Applies to Edge and Chrome independently of the Internet Explorer zone model.
+
+| Setting | Path |
+|---|---|
+| Microsoft Edge | Computer Configuration > Administrative Templates > Microsoft Edge > HTTP Authentication > **Authentication server allowlist** |
+| Google Chrome | Computer Configuration > Administrative Templates > Google > Google Chrome > HTTP Authentication > **Authentication server allowlist** |
+
+Set the value to the FQDN of the Daybook server (e.g. `daybook.company.com`).
+Multiple entries are comma-separated.
+
+**Option 2 - IE/Edge Intranet Zone assignment**
+
+Adds the site to Windows' "Local Intranet" zone, which triggers automatic
+Kerberos negotiation in all browsers that respect the zone model.
+
+| Setting | Path |
+|---|---|
+| Intranet Zone | Computer Configuration > Administrative Templates > Windows Components > Internet Explorer > Internet Control Panel > Security Page > **Site to Zone Assignment List** |
+
+Add an entry: value `daybook.company.com`, zone `1` (Local Intranet).
+
+Both options achieve the same result. Option 1 is more portable on machines
+where the IE zone model is locked down or unavailable.
 
 ### GssapiAcceptorName and Docker Swarm
 
