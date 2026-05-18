@@ -1,4 +1,5 @@
-FROM debian:trixie-slim
+ARG BASE_IMAGE=debian:trixie-slim
+FROM ${BASE_IMAGE}
 
 # Full distro upgrade to eliminate known CVEs in the base image packages.
 # Rebuild the image periodically to keep up with new fixes.
