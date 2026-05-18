@@ -8,9 +8,105 @@ declare(strict_types=1);
 // templates/layout.php with a shared templates/partials/rows.php (fixes the
 // DRY violation with api/rows.php), and extract inline JS to assets/app.js.
 
-require_once __DIR__ . '/src/functions.php';
+require_once __DIR__ . '/../src/Env.php';
+require_once __DIR__ . '/../src/Exception/AuthenticationException.php';
+require_once __DIR__ . '/../src/Exception/AuthorizationException.php';
+require_once __DIR__ . '/../src/Auth/Authenticator.php';
+require_once __DIR__ . '/../src/functions.php';
 
 apply_system_timezone();
+App\Env::load(__DIR__ . '/../.env');
+
+$authEnabled = strtolower(trim(App\Env::get('AUTH_ENABLED') ?? 'true')) !== 'false';
+$currentUser = null;
+
+if ($authEnabled) {
+    session_set_cookie_params(['httponly' => true, 'samesite' => 'Strict']);
+    session_start();
+
+    $auth = new App\Auth\Authenticator([
+        'LDAP_HOST'             => App\Env::require('LDAP_HOST'),
+        'LDAP_PORT'             => App\Env::require('LDAP_PORT'),
+        'LDAP_DOMAIN'           => App\Env::require('LDAP_DOMAIN'),
+        'LDAP_BASE_DN'          => App\Env::require('LDAP_BASE_DN'),
+        'LDAP_SERVICE_DN'       => App\Env::require('LDAP_SERVICE_DN'),
+        'LDAP_SERVICE_PASSWORD' => App\Env::require('LDAP_SERVICE_PASSWORD'),
+        'LDAP_REQUIRED_GROUP'   => App\Env::require('LDAP_REQUIRED_GROUP'),
+        'LDAP_CA_CERT'          => App\Env::get('LDAP_CA_CERT') ?? '',
+    ]);
+
+    // Kerberos SSO path: Apache validated identity, PHP must still check group membership.
+    if (isset($_SERVER['REMOTE_USER']) && $auth->getAuthenticatedUser() === null) {
+        try {
+            $auth->verifyGroupMembership((string) $_SERVER['REMOTE_USER']);
+            $auth->startSession((string) $_SERVER['REMOTE_USER']);
+        } catch (App\Exception\AuthorizationException $e) {
+            error_log('[Daybook] SSO authorization failed: ' . $e->getMessage());
+            $loginError = 'Invalid credentials.';
+            require __DIR__ . '/../templates/login.php';
+            exit;
+        } catch (App\Exception\AuthenticationException $e) {
+            error_log('[Daybook] SSO authentication error: ' . $e->getMessage());
+            $loginError = 'Authentication service unavailable. Try again later.';
+            require __DIR__ . '/../templates/login.php';
+            exit;
+        }
+    }
+
+    // Login form POST
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'login') {
+        $username   = trim((string) ($_POST['username'] ?? ''));
+        $password   = (string) ($_POST['password'] ?? '');
+        $loginError = '';
+        try {
+            $samAccountName = $auth->authenticateWithLdap($username, $password);
+            if ($samAccountName !== false) {
+                $auth->startSession($samAccountName);
+                header('Location: ' . $_SERVER['PHP_SELF']);
+                exit;
+            }
+            error_log('[Daybook] LDAP bind rejected for user: ' . $username);
+            $loginError = 'Invalid credentials.';
+        } catch (App\Exception\AuthorizationException $e) {
+            error_log('[Daybook] Authorization failed: ' . $e->getMessage());
+            $loginError = 'Invalid credentials.';
+        } catch (App\Exception\AuthenticationException $e) {
+            error_log('[Daybook] Authentication error: ' . $e->getMessage());
+            $loginError = 'Authentication service unavailable. Try again later.';
+        }
+        require __DIR__ . '/../templates/login.php';
+        exit;
+    }
+
+    // Logout POST
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'logout') {
+        $auth->logout();
+        header('Location: ' . $_SERVER['PHP_SELF']);
+        exit;
+    }
+
+    // Auth guard.
+    $currentUser = $auth->getAuthenticatedUser();
+    if ($currentUser === null) {
+        if (isset($_SERVER['REDIRECT_STATUS'])) {
+            // Rendered as an internal ErrorDocument redirect from /sso.php.
+            // Do NOT reset the 401 status: Kerberos-capable browsers see 401 +
+            // WWW-Authenticate: Negotiate and transparently retry with their
+            // ticket. Non-Kerberos browsers render this HTML body instead.
+            $loginError = '';
+            require __DIR__ . '/../templates/login.php';
+            exit;
+        }
+        // No session yet - redirect to the SSO endpoint so the browser performs
+        // a full top-level navigation. Chromium-based browsers on domain-joined
+        // machines respond to the resulting 401+Negotiate challenge automatically
+        // (challenged negotiation works without intranet zone configuration).
+        header('Location: /sso.php');
+        exit;
+    }
+} else {
+    $currentUser = 'local';
+}
 
 // --- Handle POST (PRG pattern) ---
 
@@ -119,11 +215,22 @@ if ($emoji_lang !== 'en') {
 
 <header class="page-header">
     <h1>Daybook</h1>
-    <?php if ($has_logo): ?>
-        <img src="assets/logo.png" alt="Logo" class="logo">
-    <?php else: ?>
-        <div class="logo-placeholder">Place logo here</div>
-    <?php endif ?>
+    <div class="header-right">
+        <?php if ($has_logo): ?>
+            <img src="assets/logo.png" alt="Logo" class="logo">
+        <?php else: ?>
+            <div class="logo-placeholder">Place logo here</div>
+        <?php endif ?>
+        <?php if ($authEnabled): ?>
+            <div class="user-info">
+                <span class="username"><?= h((string) $currentUser) ?></span>
+                <form method="post" style="display:inline">
+                    <input type="hidden" name="action" value="logout">
+                    <button type="submit" class="btn btn-ghost">Logout</button>
+                </form>
+            </div>
+        <?php endif ?>
+    </div>
 </header>
 
 <?php if ($error !== ''): ?>

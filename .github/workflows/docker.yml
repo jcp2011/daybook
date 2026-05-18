@@ -1,0 +1,99 @@
+name: Build and push Docker image
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  # Rebuild weekly so apt-get dist-upgrade picks up newly released security
+  # patches without requiring a code change to trigger the pipeline.
+  schedule:
+    - cron: '0 12 * * 0'  # every Sunday at 12:00 UTC
+
+permissions:
+  contents: read
+  security-events: write  # required to publish Trivy results to the Security tab
+
+jobs:
+  build:
+    name: Build, push and scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # QEMU emulates non-native architectures (arm64) on the amd64 runner.
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: jc201176/daybook
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          # Build context is the docker/ directory — matches "cd docker && docker build ."
+          context: docker
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # SBOM: full package inventory attached as an OCI artifact to the image manifest.
+          # Provenance max mode: captures build inputs, environment, and full build graph.
+          # Both are stored on Docker Hub alongside the image and are publicly verifiable.
+          sbom: true
+          provenance: mode=max
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Primary scan: results printed directly in the workflow log.
+      - name: Scan image with Trivy (table)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: jc201176/daybook:latest
+          format: table
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+        env:
+          TRIVY_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          TRIVY_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Optional: publish results to the GitHub Security tab.
+      # Requires GitHub Advanced Security (included on public repos and paid plans).
+      # The workflow does not fail if this step is unavailable.
+      - name: Scan image with Trivy (SARIF)
+        if: always()
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: jc201176/daybook:latest
+          format: sarif
+          output: trivy-results.sarif
+          severity: CRITICAL,HIGH
+        env:
+          TRIVY_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          TRIVY_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Upload Trivy results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        continue-on-error: true
+        with:
+          sarif_file: trivy-results.sarif
