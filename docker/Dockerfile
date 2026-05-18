@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=debian:trixie-slim
+ARG BASE_IMAGE=ubuntu:noble
 FROM ${BASE_IMAGE}
 
 # Full distro upgrade to eliminate known CVEs in the base image packages.
