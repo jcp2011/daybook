@@ -4,25 +4,38 @@ A self-contained PHP application for managing dated instructions. Supports plain
 
 ## Requirements
 
-- PHP 8.1 or later with the `pdo_sqlite` extension enabled
-- A writable `data/` directory (created automatically on first run)
+- **Docker** (primary deployment) — all other dependencies are inside the image
+- **PHP 8.3** with `pdo_sqlite`, `ldap`, `intl`, `xml` — only for local development without Docker
 
 No framework, no Composer, no build step required.
 
-## Setup
+## Quick start
+
+### Docker (recommended)
 
 ```bash
-# Clone the repository
 git clone https://github.com/jcp2011/daybook.git
 cd daybook
+cp .env.example .env          # fill in LDAP and FQDN values
+# Place daybook.keytab and ad-ca.crt in the project root (see Authentication below)
+docker compose up -d
+```
 
-# Serve with the built-in PHP server
-php -S localhost:8080
+The image is published on Docker Hub (`jc201176/daybook:latest`) and pulled
+automatically on first run. The SQLite database is created at
+`/var/www/data/instructions.db` inside the named volume on the first request.
+
+### Local development (no Docker, no authentication)
+
+```bash
+git clone https://github.com/jcp2011/daybook.git
+cd daybook
+cp .env.example .env
+# Set AUTH_ENABLED=false in .env to bypass all authentication
+php -S localhost:8080 -t public/
 ```
 
 Open `http://localhost:8080` in a browser.
-
-The SQLite database is created automatically at `data/instructions.db` on the first request.
 
 ## Features
 
@@ -38,7 +51,7 @@ The SQLite database is created automatically at `data/instructions.db` on the fi
 - Delete instructions permanently
 - Sort by date ascending or descending (click the Date column header)
 - Timestamps (archived date, default date input) use the server's local timezone, detected automatically from the OS
-- Custom logo: place `assets/logo.png` to display it in the header
+- Custom logo: place `public/assets/logo.png` to display it in the header
 
 ## Project Structure
 
@@ -137,7 +150,7 @@ The script uses only `curl`, `tar`, and `python3` — no npm or Node.js required
 2. Extracts only the files needed (`picker.js`, `database.js`, `index.js`, data and i18n files)
 3. Automatically patches `database.js` with a fallback hash so the picker works on plain HTTP (non-localhost IP addresses where `crypto.subtle` is unavailable)
 
-Commit the updated `assets/emoji-picker/` afterwards to keep the repository deployable on air-gapped machines.
+Commit the updated `public/assets/emoji-picker/` afterwards to keep the repository deployable on air-gapped machines.
 
 To add or remove languages, edit the `LANGUAGES` variable at the top of the script.
 
@@ -151,7 +164,7 @@ Emoji rendering varies significantly across operating systems — Windows in
 particular displays emoji quite differently from macOS or Linux. To ensure a
 consistent appearance everywhere, the application uses the
 [Noto Color Emoji](https://fonts.google.com/noto/specimen/Noto+Color+Emoji)
-font, self-hosted under `assets/fonts/`.
+font, self-hosted under `public/assets/fonts/`.
 
 The font is split into 10 unicode-range subsets (totalling ~2 MB). The browser
 only downloads the subset(s) it actually needs for the emoji characters present
@@ -165,43 +178,74 @@ bash tools/download-fonts.sh
 
 The script uses only `curl` — no npm or Node.js required. It fetches the
 current woff2 subsets directly from Google Fonts and saves them to
-`assets/fonts/`. Commit the updated files afterwards to keep the repository
+`public/assets/fonts/`. Commit the updated files afterwards to keep the repository
 deployable on air-gapped machines.
 
 ## Logo
 
-Place a file named `logo.png` inside `assets/` to display your logo in the top-right corner of the header. The file is git-ignored so it stays local to each deployment.
+Place a file named `logo.png` inside `public/assets/` to display your logo in the top-right corner of the header. The file is git-ignored so it stays local to each deployment.
 
 ## Deployment with Docker
 
 The Docker image bundles Apache, `mod_auth_gssapi`, PHP 8.3, and all required
-extensions. App files are mounted as a read-only volume at runtime — no COPY of
-application code is baked into the image. Updating the application is a `git pull`
-on the host; no image rebuild required.
+extensions on `ubuntu:noble`. App files are mounted as a read-only volume at
+runtime — no application code is baked into the image.
 
-### Build and transfer to an air-gapped machine
+The image is published on Docker Hub at `jc201176/daybook` with tags `latest`,
+`1.0`, and `1.0.0`. It is rebuilt automatically every Sunday to pick up OS and
+PHP security patches.
+
+### Standard deployment (internet-connected host)
+
+```bash
+git clone https://github.com/jcp2011/daybook.git
+cd daybook
+cp .env.example .env                  # fill in all values (see Authentication below)
+# Place daybook.keytab and ad-ca.crt in the project root
+docker compose up -d                  # pulls jc201176/daybook:latest automatically
+```
+
+### Air-gapped deployment
 
 ```bash
 # --- Internet-connected build machine ---
 cd docker && docker build -t daybook:1.0 .
 docker save daybook:1.0 | gzip > daybook-1.0.tar.gz
 sha256sum daybook-1.0.tar.gz > daybook-1.0.tar.gz.sha256
-# Copy both files to USB drive.
+# Copy daybook-1.0.tar.gz, daybook-1.0.tar.gz.sha256, and the git repo to USB.
 
 # --- Air-gapped target machine ---
 sha256sum -c daybook-1.0.tar.gz.sha256          # verify integrity before loading
 docker load < /media/usb/daybook-1.0.tar.gz
-git clone <repo-on-usb> daybook && cd daybook   # or: git pull
-cp .env.example .env                            # fill in LDAP values (see Authentication below)
-# Copy daybook.keytab from the AD administrator to ./daybook.keytab
-docker-compose up -d
+git clone <repo-on-usb> daybook && cd daybook
+cp .env.example .env                            # fill in all values
+# Edit docker-compose.yml: set image: daybook:1.0
+# Place daybook.keytab and ad-ca.crt in the project root
+docker compose up -d
 ```
 
 ### Updating
 
+**Application code** (PHP, templates, assets) — app files are volume-mounted,
+so a `git pull` takes effect immediately with no container restart:
+
 ```bash
 git pull
-docker-compose restart   # picks up the updated app files from the volume mount
+```
+
+**Docker image** (OS packages, PHP, Apache) — pull the new image and recreate
+the container:
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+For air-gapped machines, build and transfer the new image as above, then:
+
+```bash
+# Edit docker-compose.yml: update the image tag
+docker compose up -d
 ```
 
 ### Docker Swarm deployment
@@ -437,13 +481,17 @@ where the IE zone model is locked down or unavailable.
 `docker/apache.conf` contains:
 
 ```apache
-GssapiAcceptorName HTTP/${DAYBOOK_FQDN}
+GssapiAcceptorName HTTP@${DAYBOOK_FQDN}
 ```
 
 This directive explicitly names the SPN that `mod_auth_gssapi` looks up in the
 keytab, decoupling it from the container's actual hostname. Without it, Apache
 would derive the SPN from the container hostname, which Swarm may set to a
 random value.
+
+The `HTTP@host` format (with `@`, not `/`) is required because mod_auth_gssapi
+always uses `GSS_C_NT_HOSTBASED_SERVICE` for this directive. The GSSAPI library
+then resolves the realm from `[domain_realm]` in `krb5.conf` or via DNS.
 
 `${DAYBOOK_FQDN}` is resolved natively by Apache 2.4 from the container
 environment, which Docker Compose sets via the `environment:` key. The three
