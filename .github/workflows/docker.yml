@@ -6,10 +6,26 @@ on:
       - main
     tags:
       - 'v*'
+    # Only rebuild when the image definition changes.
+    # Runtime config files (apache.conf, krb5.conf, etc.) are volume-mounted
+    # and do not affect the image layer.
+    paths:
+      - 'docker/Dockerfile'
+      - '.github/workflows/docker.yml'
   # Rebuild weekly so apt-get dist-upgrade picks up newly released security
   # patches without requiring a code change to trigger the pipeline.
   schedule:
     - cron: '0 12 * * 0'  # every Sunday at 12:00 UTC
+  workflow_dispatch:
+    inputs:
+      skip_cve_gate:
+        description: 'Skip CVE gate and push even if vulnerabilities are found'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
 
 permissions:
   contents: read
@@ -17,7 +33,7 @@ permissions:
 
 jobs:
   build:
-    name: Build, push and scan
+    name: Build, scan and push
     runs-on: ubuntu-latest
 
     steps:
@@ -47,10 +63,52 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=latest
 
+      # Build amd64 locally so Trivy can scan the image before it is pushed.
+      # Scanning a local image avoids BLOB_UNKNOWN errors that occur when Trivy
+      # tries to pull individual layers from a multi-platform manifest index
+      # that also contains SBOM and provenance attestation sub-manifests.
+      - name: Build (amd64, local - for scanning)
+        uses: docker/build-push-action@v6
+        with:
+          context: docker
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: daybook:scan
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # CVE gate: exit-code 1 blocks the push on any CRITICAL/HIGH finding.
+      # Set skip_cve_gate=true at workflow_dispatch to bypass (e.g. accepted risk).
+      - name: Scan with Trivy (table)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: daybook:scan
+          format: table
+          severity: CRITICAL,HIGH
+          exit-code: ${{ github.event.inputs.skip_cve_gate == 'true' && '0' || '1' }}
+
+      # Publish SARIF results to the GitHub Security tab regardless of scan outcome.
+      - name: Scan with Trivy (SARIF)
+        if: always()
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: daybook:scan
+          format: sarif
+          output: trivy-results.sarif
+          severity: CRITICAL,HIGH
+
+      - name: Upload Trivy results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        continue-on-error: true
+        with:
+          sarif_file: trivy-results.sarif
+
+      # Publish multi-platform image with SBOM and provenance only after the scan passes.
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          # Build context is the docker/ directory — matches "cd docker && docker build ."
           context: docker
           platforms: linux/amd64,linux/arm64
           push: true
@@ -63,37 +121,3 @@ jobs:
           provenance: mode=max
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      # Primary scan: results printed directly in the workflow log.
-      - name: Scan image with Trivy (table)
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: jc201176/daybook:latest
-          format: table
-          severity: CRITICAL,HIGH
-          exit-code: '1'
-        env:
-          TRIVY_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          TRIVY_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      # Optional: publish results to the GitHub Security tab.
-      # Requires GitHub Advanced Security (included on public repos and paid plans).
-      # The workflow does not fail if this step is unavailable.
-      - name: Scan image with Trivy (SARIF)
-        if: always()
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: jc201176/daybook:latest
-          format: sarif
-          output: trivy-results.sarif
-          severity: CRITICAL,HIGH
-        env:
-          TRIVY_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          TRIVY_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Upload Trivy results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        continue-on-error: true
-        with:
-          sarif_file: trivy-results.sarif
