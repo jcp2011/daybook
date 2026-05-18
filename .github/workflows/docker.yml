@@ -52,6 +52,11 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          # SBOM: full package inventory attached as an OCI artifact to the image manifest.
+          # Provenance max mode: captures build inputs, environment, and full build graph.
+          # Both are stored on Docker Hub alongside the image and are publicly verifiable.
+          sbom: true
+          provenance: mode=max
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
