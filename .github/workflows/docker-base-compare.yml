@@ -3,7 +3,7 @@ name: Compare base image CVEs
 on:
   push:
     branches:
-      - docker
+      - main
     paths:
       - 'docker/Dockerfile'
       - '.github/workflows/docker-base-compare.yml'

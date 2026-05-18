@@ -3,9 +3,11 @@ name: Build and push Docker image
 on:
   push:
     branches:
-      - docker
-  # Rebuild weekly so apt-get dist-upgrade picks up newly released Debian
-  # security patches without requiring a code change to trigger the pipeline.
+      - main
+    tags:
+      - 'v*'
+  # Rebuild weekly so apt-get dist-upgrade picks up newly released security
+  # patches without requiring a code change to trigger the pipeline.
   schedule:
     - cron: '0 12 * * 0'  # every Sunday at 12:00 UTC
 
@@ -41,6 +43,8 @@ jobs:
         with:
           images: jc201176/daybook
           tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
             type=raw,value=latest
 
       - name: Build and push
