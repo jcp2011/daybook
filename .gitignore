@@ -1,9 +1,10 @@
 data/
 .env
 daybook.keytab
+ad-ca.crt
 .php-cs-fixer.cache
 .phpunit.result.cache
-assets/logo*
+public/assets/logo*
 
 # Claude
 CLAUDE.md
