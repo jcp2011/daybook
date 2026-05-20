@@ -114,6 +114,12 @@ Open `http://localhost:8080` in a browser.
 +-- phpunit.xml
 ```
 
+## Dev environment
+
+A fully automated dev environment (Scaleway VM, Docker Swarm, Traefik, full Kerberos + LDAPS auth) can be provisioned from scratch using Terraform and Ansible.
+
+See [infra/README.md](infra/README.md) for the complete step-by-step guide.
+
 ## Development
 
 All tooling runs from local PHARs in `tools/` - no global installation needed.
