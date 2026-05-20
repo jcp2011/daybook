@@ -61,7 +61,7 @@ services:
       # Replace daybook.company.com with your actual FQDN before deploying.
       labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.daybook.rule=Host(`daybook.company.com`)"
+        - "traefik.http.routers.daybook.rule=Host(`${DAYBOOK_FQDN}`)"
         - "traefik.http.routers.daybook.entrypoints=websecure"
         - "traefik.http.routers.daybook.tls=true"
         - "traefik.http.services.daybook.loadbalancer.server.port=80"

@@ -1,0 +1,38 @@
+---
+- name: Create Traefik directory structure
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ traefik_path }}"
+    - "{{ traefik_path }}/certs"
+    - "{{ traefik_path }}/dynamic"
+
+- name: Copy TLS certificate
+  ansible.builtin.copy:
+    src: "{{ secrets_src }}/cert.pem"
+    dest: "{{ traefik_path }}/certs/cert.pem"
+    mode: '0640'
+
+- name: Copy TLS private key
+  ansible.builtin.copy:
+    src: "{{ secrets_src }}/key.pem"
+    dest: "{{ traefik_path }}/certs/key.pem"
+    mode: '0640'
+
+- name: Copy Traefik dynamic TLS config
+  ansible.builtin.copy:
+    src: tls.yml
+    dest: "{{ traefik_path }}/dynamic/tls.yml"
+    mode: '0644'
+
+- name: Copy Traefik stack file
+  ansible.builtin.copy:
+    src: traefik.yml
+    dest: "{{ traefik_path }}/traefik.yml"
+    mode: '0644'
+
+- name: Deploy Traefik stack
+  ansible.builtin.command: docker stack deploy -c {{ traefik_path }}/traefik.yml traefik
+  changed_when: true

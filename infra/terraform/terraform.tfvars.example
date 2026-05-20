@@ -1,0 +1,4 @@
+scw_access_key         = "SCWXXXXXXXXXXXXXXXXX"
+scw_secret_key         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+scw_project_id         = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+ansible_ssh_public_key = "ssh-ed25519 AAAA... user@host"

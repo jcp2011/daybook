@@ -1,0 +1,41 @@
+---
+- name: Create application base directory
+  ansible.builtin.file:
+    path: "{{ appli_base }}"
+    state: directory
+    mode: '0755'
+
+- name: Clone Daybook repository
+  ansible.builtin.git:
+    repo: "{{ daybook_repo }}"
+    dest: "{{ daybook_path }}"
+    version: main
+    update: true
+
+- name: Copy .env file
+  ansible.builtin.copy:
+    src: "{{ secrets_src }}/.env"
+    dest: "{{ daybook_path }}/.env"
+    mode: '0600'
+
+- name: Copy Kerberos keytab
+  ansible.builtin.copy:
+    src: "{{ secrets_src }}/daybook.keytab"
+    dest: "{{ daybook_path }}/daybook.keytab"
+    mode: '0600'
+
+- name: Copy AD CA certificate
+  ansible.builtin.copy:
+    src: "{{ secrets_src }}/ad-ca.crt"
+    dest: "{{ daybook_path }}/ad-ca.crt"
+    mode: '0644'
+
+- name: Deploy Daybook stack
+  ansible.builtin.shell: |
+    set -a
+    source {{ daybook_path }}/.env
+    set +a
+    docker stack deploy -c {{ daybook_path }}/docker-stack.yml daybook
+  args:
+    executable: /bin/bash
+  changed_when: true

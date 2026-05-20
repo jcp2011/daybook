@@ -1,0 +1,5 @@
+daybook_repo: "https://github.com/jcp2011/daybook.git"
+appli_base:   "/appli"
+traefik_path: "{{ appli_base }}/traefik"
+daybook_path: "{{ appli_base }}/daybook"
+secrets_src:  "{{ playbook_dir }}/secrets"

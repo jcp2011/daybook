@@ -1,0 +1,9 @@
+---
+- name: Provision Daybook dev server
+  hosts: daybook
+  become: true
+  roles:
+    - docker
+    - swarm
+    - traefik
+    - daybook
