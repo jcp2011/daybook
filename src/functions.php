@@ -43,9 +43,36 @@ function get_db(string $path = DB_PATH): PDO
             description TEXT    NOT NULL,
             archived    INTEGER NOT NULL DEFAULT 0,
             archived_at TEXT    DEFAULT NULL,
-            is_rich     INTEGER NOT NULL DEFAULT 0
+            is_rich     INTEGER NOT NULL DEFAULT 0,
+            created_by  TEXT    DEFAULT NULL,
+            created_at  TEXT    DEFAULT NULL
         )
     ');
+
+    // Idempotent column migrations: the full schema is declared here so any
+    // column absent from an older database is added automatically on startup.
+    // SQLite only allows ALTER TABLE ADD COLUMN on columns that have a DEFAULT
+    // value; founding columns (id, date, description) have none and are null.
+    $schema = [
+        'id'          => null,                         // PRIMARY KEY - table must be recreated to add
+        'date'        => null,                         // NOT NULL, no default - cannot be added
+        'description' => null,                         // NOT NULL, no default - cannot be added
+        'archived'    => 'INTEGER NOT NULL DEFAULT 0',
+        'archived_at' => 'TEXT DEFAULT NULL',
+        'is_rich'     => 'INTEGER NOT NULL DEFAULT 0',
+        'created_by'  => 'TEXT DEFAULT NULL',
+        'created_at'  => 'TEXT DEFAULT NULL',
+    ];
+    $pragma = $db->query('PRAGMA table_info(instructions)');
+    if ($pragma === false) {
+        throw new \RuntimeException('PRAGMA table_info query failed.');
+    }
+    $existing = array_column($pragma->fetchAll(PDO::FETCH_ASSOC), 'name');
+    foreach ($schema as $column => $definition) {
+        if ($definition !== null && !in_array($column, $existing, true)) {
+            $db->exec("ALTER TABLE instructions ADD COLUMN $column $definition");
+        }
+    }
 
     return $db;
 }
@@ -57,13 +84,20 @@ function get_db(string $path = DB_PATH): PDO
  * @param string $date        ISO 8601 date string (YYYY-MM-DD).
  * @param string $description Plain text or sanitised rich HTML content.
  * @param bool   $is_rich     True when $description contains rich HTML.
+ * @param string $created_by  Username of the authenticated user, or empty string for anonymous.
  */
-function add_instruction(PDO $db, string $date, string $description, bool $is_rich): void
+function add_instruction(PDO $db, string $date, string $description, bool $is_rich, string $created_by = ''): void
 {
     $stmt = $db->prepare(
-        'INSERT INTO instructions (date, description, is_rich) VALUES (?, ?, ?)'
+        'INSERT INTO instructions (date, description, is_rich, created_by, created_at) VALUES (?, ?, ?, ?, ?)'
     );
-    $stmt->execute([$date, $description, $is_rich ? 1 : 0]);
+    $stmt->execute([
+        $date,
+        $description,
+        $is_rich ? 1 : 0,
+        $created_by !== '' ? $created_by : null,
+        date('Y-m-d H:i:s'),
+    ]);
 }
 
 /**

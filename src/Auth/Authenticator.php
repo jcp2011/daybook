@@ -140,7 +140,7 @@ class Authenticator
      */
     private function connect(): \LDAP\Connection
     {
-        // Must be set globally on null before ldap_connect() — the TLS context
+        // Must be set globally on null before ldap_connect() - the TLS context
         // is initialised at connect time and ignores per-connection options set later.
         // /etc/ldap/ldap.conf (mounted at runtime) is the primary mechanism;
         // this is a belt-and-suspenders fallback for environments where the

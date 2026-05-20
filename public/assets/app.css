@@ -218,6 +218,7 @@ td.description.plain { white-space: pre-wrap; }
 td.description.rich p { margin: 0 0 .25em; }
 td.description.rich ol,
 td.description.rich ul { padding-left: 1.5em; margin: 0 0 .25em; }
+.entry-meta { font-size: .75rem; font-style: italic; color: #d1d5db; margin-top: .25em; }
 td.actions { white-space: nowrap; width: 1%; text-align: right; }
 
 .btn {

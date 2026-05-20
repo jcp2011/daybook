@@ -4,8 +4,8 @@ A self-contained PHP application for managing dated instructions. Supports plain
 
 ## Requirements
 
-- **Docker** (primary deployment) — all other dependencies are inside the image
-- **PHP 8.3** with `pdo_sqlite`, `ldap`, `intl`, `xml` — only for local development without Docker
+- **Docker** (primary deployment) - all other dependencies are inside the image
+- **PHP 8.3** with `pdo_sqlite`, `ldap`, `intl`, `xml` - only for local development without Docker
 
 No framework, no Composer, no build step required.
 
@@ -40,12 +40,12 @@ Open `http://localhost:8080` in a browser.
 ## Features
 
 - Add instructions with a date/time and a plain or rich text description
-- Rich text editor (Quill.js, fully local — no CDN) with:
+- Rich text editor (Quill.js, fully local - no CDN) with:
   - Bold, italic, strikethrough
   - Text colour, background colour, font size
   - Ordered and unordered lists
-  - Hyperlinks (http, https, mailto — unsafe schemes are stripped on save)
-  - Full Unicode emoji picker (emoji-picker-element, fully local — no CDN) with search and categories
+  - Hyperlinks (http, https, mailto - unsafe schemes are stripped on save)
+  - Full Unicode emoji picker (emoji-picker-element, fully local - no CDN) with search and categories
 - Edit active instructions inline (archived instructions are read-only)
 - Archive and restore instructions (archived entries record the archival date/time)
 - Delete instructions permanently
@@ -116,7 +116,7 @@ Open `http://localhost:8080` in a browser.
 
 ## Development
 
-All tooling runs from local PHARs in `tools/` — no global installation needed.
+All tooling runs from local PHARs in `tools/` - no global installation needed.
 
 ### Code style
 
@@ -144,7 +144,7 @@ Run the download script from a machine with internet access:
 bash tools/download-emoji-picker.sh
 ```
 
-The script uses only `curl`, `tar`, and `python3` — no npm or Node.js required. It:
+The script uses only `curl`, `tar`, and `python3` - no npm or Node.js required. It:
 
 1. Fetches the latest versions of `emoji-picker-element` and `emoji-picker-element-data` from the npm registry
 2. Extracts only the files needed (`picker.js`, `database.js`, `index.js`, data and i18n files)
@@ -160,7 +160,7 @@ To add or remove languages, edit the `LANGUAGES` variable at the top of the scri
 
 ## Updating the Noto Color Emoji font
 
-Emoji rendering varies significantly across operating systems — Windows in
+Emoji rendering varies significantly across operating systems - Windows in
 particular displays emoji quite differently from macOS or Linux. To ensure a
 consistent appearance everywhere, the application uses the
 [Noto Color Emoji](https://fonts.google.com/noto/specimen/Noto+Color+Emoji)
@@ -176,7 +176,7 @@ Run the download script from a machine with internet access:
 bash tools/download-fonts.sh
 ```
 
-The script uses only `curl` — no npm or Node.js required. It fetches the
+The script uses only `curl` - no npm or Node.js required. It fetches the
 current woff2 subsets directly from Google Fonts and saves them to
 `public/assets/fonts/`. Commit the updated files afterwards to keep the repository
 deployable on air-gapped machines.
@@ -189,7 +189,7 @@ Place a file named `logo.png` inside `public/assets/` to display your logo in th
 
 The Docker image bundles Apache, `mod_auth_gssapi`, PHP 8.3, and all required
 extensions on `ubuntu:noble`. App files are mounted as a read-only volume at
-runtime — no application code is baked into the image.
+runtime - no application code is baked into the image.
 
 The image is published on Docker Hub at `jc201176/daybook` with tags `latest`,
 `1.0`, and `1.0.0`. It is rebuilt automatically every Sunday to pick up OS and
@@ -226,14 +226,14 @@ docker compose up -d
 
 ### Updating
 
-**Application code** (PHP, templates, assets) — app files are volume-mounted,
+**Application code** (PHP, templates, assets) - app files are volume-mounted,
 so a `git pull` takes effect immediately with no container restart:
 
 ```bash
 git pull
 ```
 
-**Docker image** (OS packages, PHP, Apache) — pull the new image and recreate
+**Docker image** (OS packages, PHP, Apache) - pull the new image and recreate
 the container:
 
 ```bash
@@ -278,7 +278,7 @@ defaults suitable for a small internal application.
 
 `docker/security.conf` and `docker/php-security.ini` are mounted as read-only
 volumes at runtime (see `docker-compose.yml`). They can be edited on the host
-and applied with `docker-compose restart` — no image rebuild required.
+and applied with `docker-compose restart` - no image rebuild required.
 
 #### `session.cookie_secure` in `docker/php-security.ini`
 

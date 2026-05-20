@@ -65,9 +65,19 @@ $instructions  = fetch_instructions($db, $show_archived, $sort);
     <tr>
         <td class="date"><?= h(str_replace('T', ' ', (string) $row['date'])) ?></td>
         <?php if ((int) $row['is_rich'] === 1): ?>
-            <td class="description rich"><?= $row['description'] ?></td>
+            <td class="description rich">
+                <?= $row['description'] ?>
+                <?php if (($row['created_at'] ?? '') !== ''): ?>
+                    <div class="entry-meta"><?php if ($authEnabled && ($row['created_by'] ?? '') !== ''): ?><?= h((string) $row['created_by']) ?> - <?php endif ?><?= h(substr((string) $row['created_at'], 0, 16)) ?></div>
+                <?php endif ?>
+            </td>
         <?php else: ?>
-            <td class="description plain"><?= h((string) $row['description']) ?></td>
+            <td class="description plain">
+                <?= h((string) $row['description']) ?>
+                <?php if (($row['created_at'] ?? '') !== ''): ?>
+                    <div class="entry-meta"><?php if ($authEnabled && ($row['created_by'] ?? '') !== ''): ?><?= h((string) $row['created_by']) ?> - <?php endif ?><?= h(substr((string) $row['created_at'], 0, 16)) ?></div>
+                <?php endif ?>
+            </td>
         <?php endif ?>
         <?php if ($show_archived): ?>
             <td class="archived-at"><?= h((string) ($row['archived_at'] ?? '')) ?></td>

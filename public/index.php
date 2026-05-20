@@ -131,7 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($date === '' || $empty) {
             $error = 'Date and description are required.';
         } else {
-            add_instruction($db, $date, $description, $is_rich);
+            add_instruction($db, $date, $description, $is_rich, $currentUser ?? '');
             header('Location: ' . $_SERVER['PHP_SELF']);
             exit;
         }
@@ -208,8 +208,8 @@ if ($emoji_lang !== 'en') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Daybook</title>
-    <link rel="stylesheet" href="assets/quill.snow.css">
-    <link rel="stylesheet" href="assets/app.css">
+    <link rel="stylesheet" href="assets/quill.snow.css?v=<?= filemtime(__DIR__ . '/assets/quill.snow.css') ?>">
+    <link rel="stylesheet" href="assets/app.css?v=<?= filemtime(__DIR__ . '/assets/app.css') ?>">
 </head>
 <body>
 
@@ -300,9 +300,19 @@ if ($emoji_lang !== 'en') {
                 <tr>
                     <td class="date"><?= h(str_replace('T', ' ', (string) $row['date'])) ?></td>
                     <?php if ((int) $row['is_rich'] === 1): ?>
-                        <td class="description rich"><?= $row['description'] ?></td>
+                        <td class="description rich">
+                            <?= $row['description'] ?>
+                            <?php if (($row['created_at'] ?? '') !== ''): ?>
+                                <div class="entry-meta"><?php if ($authEnabled && ($row['created_by'] ?? '') !== ''): ?><?= h((string) $row['created_by']) ?> - <?php endif ?><?= h(substr((string) $row['created_at'], 0, 16)) ?></div>
+                            <?php endif ?>
+                        </td>
                     <?php else: ?>
-                        <td class="description plain"><?= h((string) $row['description']) ?></td>
+                        <td class="description plain">
+                            <?= h((string) $row['description']) ?>
+                            <?php if (($row['created_at'] ?? '') !== ''): ?>
+                                <div class="entry-meta"><?php if ($authEnabled && ($row['created_by'] ?? '') !== ''): ?><?= h((string) $row['created_by']) ?> - <?php endif ?><?= h(substr((string) $row['created_at'], 0, 16)) ?></div>
+                            <?php endif ?>
+                        </td>
                     <?php endif ?>
                     <?php if ($show_archived): ?>
                         <td class="archived-at"><?= h((string) ($row['archived_at'] ?? '')) ?></td>
