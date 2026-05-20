@@ -58,7 +58,6 @@ services:
       replicas: 1
 
       # Traefik reads labels from deploy.labels in Swarm mode.
-      # Replace daybook.company.com with your actual FQDN before deploying.
       labels:
         - "traefik.enable=true"
         - "traefik.http.routers.daybook.rule=Host(`${DAYBOOK_FQDN}`)"

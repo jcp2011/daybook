@@ -30,6 +30,12 @@
     dest: "{{ daybook_path }}/ad-ca.crt"
     mode: '0644'
 
+- name: Copy krb5.conf with real Kerberos realm
+  ansible.builtin.copy:
+    src: "{{ secrets_src }}/krb5.conf"
+    dest: "{{ daybook_path }}/docker/krb5.conf"
+    mode: '0644'
+
 - name: Deploy Daybook stack
   ansible.builtin.shell: |
     set -a

@@ -46,15 +46,54 @@ Create the secrets directory and copy the required files:
 ```bash
 mkdir -p infra/ansible/secrets
 
-# Application secrets (from your existing deployment or .env.example)
-cp .env            infra/ansible/secrets/.env
-cp daybook.keytab  infra/ansible/secrets/daybook.keytab
-cp ad-ca.crt       infra/ansible/secrets/ad-ca.crt
-
-# TLS certificate (generated above or provided by your CA)
+# TLS certificate (generated in Step 2 or provided by your CA)
 # infra/ansible/secrets/cert.pem
 # infra/ansible/secrets/key.pem
+
+# Kerberos keytab and AD CA certificate (from your AD administrator)
+cp daybook.keytab  infra/ansible/secrets/daybook.keytab
+cp ad-ca.crt       infra/ansible/secrets/ad-ca.crt
 ```
+
+### Fill in real values - mandatory before deployment
+
+All placeholder texts (`company.com`, `COMPANY.COM`) must be replaced with your
+actual values before running the playbook. Two files require editing:
+
+**`infra/ansible/secrets/.env`** - copy from the template and fill in every value:
+
+```bash
+cp .env.example infra/ansible/secrets/.env
+```
+
+| Key | Replace with |
+|---|---|
+| `DAYBOOK_FQDN` | Hostname the browser uses to reach the server (e.g. `daybook.corp.example`) |
+| `LDAP_HOST` | FQDN or IP of your Domain Controller |
+| `LDAP_DOMAIN` | Your AD domain (e.g. `corp.example`) |
+| `LDAP_BASE_DN` | Base DN for LDAP searches (e.g. `DC=corp,DC=example`) |
+| `LDAP_SERVICE_DN` | Full DN of the service account |
+| `LDAP_SERVICE_PASSWORD` | Password of the service account |
+| `LDAP_REQUIRED_GROUP` | Full DN of the AD group allowed to access Daybook |
+
+**`infra/ansible/secrets/krb5.conf`** - copy from the repo and update the realm:
+
+```bash
+cp docker/krb5.conf infra/ansible/secrets/krb5.conf
+```
+
+Edit the file and replace `COMPANY.COM` with your actual Kerberos realm
+(usually the uppercase version of your AD domain, e.g. `CORP.EXAMPLE`):
+
+```ini
+[libdefaults]
+    dns_lookup_kdc   = true
+    dns_lookup_realm = true
+    default_realm    = CORP.EXAMPLE
+```
+
+Ansible overwrites `docker/krb5.conf` in the cloned repository with this file,
+so the container picks up the real realm without any manual step on the server.
 
 `infra/ansible/secrets/` is git-ignored and never committed.
 
