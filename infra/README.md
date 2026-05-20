@@ -83,27 +83,10 @@ terraform init
 terraform apply
 ```
 
-Review the plan and confirm. Terraform outputs the server IP when done:
+Review the plan and confirm. Terraform provisions the VM and automatically writes
+`infra/ansible/inventory.ini` with the server IP - no manual step needed.
 
-```
-Outputs:
-  server_ip = "51.158.x.x"
-```
-
-## Step 6 - Configure the Ansible inventory
-
-```bash
-cp infra/ansible/inventory.ini.example infra/ansible/inventory.ini
-```
-
-Edit `inventory.ini` and replace `<SERVER_IP>` with the IP from the previous step:
-
-```ini
-[daybook]
-51.158.x.x ansible_user=ansible ansible_ssh_private_key_file=~/.ssh/id_ansible
-```
-
-## Step 7 - Run the Ansible playbook
+## Step 6 - Run the Ansible playbook
 
 Wait ~60 seconds for cloud-init to complete, then:
 
@@ -121,7 +104,7 @@ The playbook runs four roles in order:
 | `traefik` | Deploys Traefik v3 with manual TLS under `/appli/traefik/` |
 | `daybook` | Clones the repo, copies secrets, and deploys Daybook under `/appli/daybook/` |
 
-## Step 8 - Verify
+## Step 7 - Verify
 
 ```bash
 # Check Traefik is running

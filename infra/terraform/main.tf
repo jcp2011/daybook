@@ -4,6 +4,10 @@ terraform {
       source  = "hashicorp/scaleway"
       version = "~> 2.0"
     }
+    local = {
+      source  = "hashicorp/local"
+      version = "~> 2.0"
+    }
   }
 }
 
@@ -53,4 +57,12 @@ resource "scaleway_instance_server" "daybook" {
       ansible_ssh_public_key = var.ansible_ssh_public_key
     })
   }
+}
+
+resource "local_file" "ansible_inventory" {
+  content = templatefile("${path.module}/inventory.ini.tpl", {
+    server_ip = scaleway_instance_ip.daybook.address
+  })
+  filename        = "${path.module}/../ansible/inventory.ini"
+  file_permission = "0644"
 }
