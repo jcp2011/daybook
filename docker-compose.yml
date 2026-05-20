@@ -1,6 +1,6 @@
 services:
   daybook:
-    image: daybook:latest
+    image: jc201176/daybook:latest
 
     environment:
       - DAYBOOK_FQDN

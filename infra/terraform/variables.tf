@@ -12,6 +12,3 @@ variable "scw_project_id" {
   description = "Scaleway project ID"
 }
 
-variable "ansible_ssh_public_key" {
-  description = "SSH public key installed for the ansible user on first boot"
-}

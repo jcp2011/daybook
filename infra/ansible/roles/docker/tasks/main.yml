@@ -33,10 +33,15 @@
     mode: '0644'
 
 - name: Add Docker apt repository
-  ansible.builtin.apt_repository:
-    repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu noble stable"
+  ansible.builtin.deb822_repository:
+    name: docker
+    types: deb
+    uris: https://download.docker.com/linux/ubuntu
+    suites: noble
+    components: stable
+    signed_by: /etc/apt/keyrings/docker.asc
+    architectures: "{{ ansible_userspace_architecture }}"
     state: present
-    filename: docker
 
 - name: Install Docker CE
   ansible.builtin.apt:

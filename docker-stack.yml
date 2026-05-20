@@ -1,6 +1,6 @@
 services:
   daybook:
-    image: daybook:latest
+    image: jc201176/daybook:latest
 
     # Drop all Linux capabilities and add back only what Apache + mod_auth_gssapi
     # requires at startup. Worker processes run as www-data and need none of these.

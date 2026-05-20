@@ -11,6 +11,10 @@ terraform {
   }
 }
 
+locals {
+  ansible_ssh_public_key = file("${path.module}/../ansible/secrets/id_ansible.pub")
+}
+
 provider "scaleway" {
   access_key = var.scw_access_key
   secret_key = var.scw_secret_key
@@ -54,7 +58,7 @@ resource "scaleway_instance_server" "daybook" {
 
   user_data = {
     "cloud-init" = templatefile("${path.module}/cloud-init.yml.tpl", {
-      ansible_ssh_public_key = var.ansible_ssh_public_key
+      ansible_ssh_public_key = local.ansible_ssh_public_key
     })
   }
 }

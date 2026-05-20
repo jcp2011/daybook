@@ -17,13 +17,14 @@ The following tools must be installed on your workstation:
 
 ## Step 1 - Generate an Ansible SSH key pair
 
-If you do not already have a dedicated key pair for Ansible:
-
 ```bash
-ssh-keygen -t ed25519 -f ~/.ssh/id_ansible -C "ansible"
+mkdir -p infra/ansible/secrets
+ssh-keygen -t ed25519 -f infra/ansible/secrets/id_ansible -C "ansible" -N ""
 ```
 
-The public key (`~/.ssh/id_ansible.pub`) goes into `terraform.tfvars`. The private key stays on your workstation.
+Both keys are stored in `infra/ansible/secrets/`, which is git-ignored and never
+committed. Terraform reads the public key directly from that path - no need to
+paste it anywhere.
 
 ## Step 2 - Prepare a TLS certificate
 
@@ -103,14 +104,16 @@ so the container picks up the real realm without any manual step on the server.
 cp infra/terraform/terraform.tfvars.example infra/terraform/terraform.tfvars
 ```
 
-Edit `terraform.tfvars` and fill in your Scaleway credentials and the Ansible SSH public key:
+Edit `terraform.tfvars` and fill in your Scaleway credentials:
 
 ```hcl
-scw_access_key         = "SCWXXXXXXXXXXXXXXXXX"       # Scaleway access key
-scw_secret_key         = "xxxxxxxx-xxxx-xxxx-..."     # Scaleway secret key
-scw_project_id         = "xxxxxxxx-xxxx-xxxx-..."     # Scaleway project ID
-ansible_ssh_public_key = "ssh-ed25519 AAAA..."        # content of ~/.ssh/id_ansible.pub
+scw_access_key = "SCWXXXXXXXXXXXXXXXXX"       # Scaleway access key
+scw_secret_key = "xxxxxxxx-xxxx-xxxx-..."     # Scaleway secret key
+scw_project_id = "xxxxxxxx-xxxx-xxxx-..."     # Scaleway project ID
 ```
+
+The Ansible SSH public key is read automatically from
+`infra/ansible/secrets/id_ansible.pub` — no manual copy required.
 
 Your Scaleway credentials are available in the [Scaleway console](https://console.scaleway.com) under **IAM > API keys**.
 
